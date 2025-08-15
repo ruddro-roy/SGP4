@@ -130,7 +130,3 @@ This is a learning project, so don't expect production-ready code. But if you're
 ## Disclaimer
 
 This is experimental software for educational and research purposes. Do not use it for actual space operations, mission planning, or any safety-critical applications. Always use official, validated tracking systems for real-world space activities.
-
-## License
-
-Feel free to use, modify, and learn from this code.
