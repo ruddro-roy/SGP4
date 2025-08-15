@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <title>Ruddro Roy</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Systems for satellite passes, link margins, and network QoS. Reproducible outputs. Transparent methods." />
+  <meta name="author" content="Ruddro Roy" />
+  <meta property="og:title" content="Ruddro Roy" />
+  <meta property="og:description" content="Systems for satellite passes, link margins, and network QoS. Reproducible outputs. Transparent methods." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg: #0e0f12; --fg:#e8e8ea; --muted:#9aa0a6;
+      --link:#4dd4a8; --accent:#20c997;
+      --card:#15171c; --border:#24262c; --code:#0f1116; --max: 820px;
+    }
+    [data-theme="light"]{
+      --bg:#ffffff; --fg:#101115; --muted:#5e6572;
+      --link:#0a7f5a; --accent:#0aa06f;
+      --card:#fafafa; --border:#e9eaee; --code:#f5f7fb;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial;background:var(--bg);color:var(--fg);line-height:1.65;font-size:16px}
+    a{color:var(--link);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:var(--max);margin:0 auto;padding:28px 16px 64px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 18px;border-bottom:1px solid var(--border)}
+    .name{font-weight:800;letter-spacing:.2px;font-size:18px}
+    nav a{color:var(--muted);margin-left:14px;font-weight:600}
+    nav a.active, nav a:hover{color:var(--fg)}
+    .hero{padding:22px 0 8px}
+    .t{font-size:32px;font-weight:800;line-height:1.15;margin:6px 0 10px}
+    .sub{color:var(--muted);max-width:64ch}
+    .cta{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg);font-weight:600}
+    .btn.secondary{background:transparent}
+    section{padding:26px 0;border-bottom:1px solid var(--border)}
+    h2{font-size:18px;font-weight:800;letter-spacing:.2px;margin:0 0 12px}
+    .grid{display:grid;gap:12px}
+    @media (min-width:780px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+    .card h3{margin:0 0 6px;font-size:16px;font-weight:700}
+    .meta{color:var(--muted);font-size:13px;margin-top:6px}
+    .badge{display:inline-block;font:600 12px/1 JetBrains Mono,monospace;padding:3px 7px;border:1px solid var(--border);border-radius:999px;background:var(--code);color:var(--muted);margin-right:6px}
+    code,.mono{font-family:JetBrains Mono,ui-monospace,Menlo,Consolas,monospace;background:var(--code);border:1px solid var(--border);padding:2px 6px;border-radius:7px}
+    .list{margin:6px 0 0;padding-left:18px}
+    .list li{margin:6px 0}
+    footer{padding:18px 0 0;color:var(--muted);font-size:13px}
+    .note{color:var(--muted);font-size:14px}
+    .pill{display:inline-flex;gap:6px;align-items:center}
+    .toggle{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:10px;padding:8px 10px;cursor:pointer}
+    .sr{position:absolute;left:-9999px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="pill">
+        <span class="name">Ruddro Roy</span>
+        <span class="badge">Dhaka to Torino</span>
+      </div>
+      <nav aria-label="Primary">
+        <a href="#builds" class="active">Builds</a>
+        <a href="#projects">Projects</a>
+        <a href="#journey">Journey</a>
+        <a href="#links">Links</a>
+        <button id="theme" class="toggle" aria-pressed="false" aria-label="Toggle theme">Theme</button>
+      </nav>
+    </header>
+
+    <section class="hero" id="top">
+      <div class="t">Systems for space and networks.</div>
+      <p class="sub">
+        Focus on reliable outputs and transparent methods. Frames and epochs shown. Everything reproducible.
+      </p>
+      <div class="cta">
+        <a class="btn" href="#builds">See builds</a>
+        <a class="btn secondary" href="https://github.com/ruddro-roy" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn secondary" href="https://x.com/royrdro" target="_blank" rel="noopener">X</a>
+      </div>
+    </section>
+
+    <section id="builds" aria-labelledby="builds-h">
+      <h2 id="builds-h">Builds</h2>
+      <div class="grid cols-2">
+        <article class="card">
+          <h3>LEO pass planner and link margin</h3>
+          <p>Input a TLE and a ground site. Get pass times and a margin timeline using FSPL with ITU gaseous and rain loss options. Badges show <span class="badge">frame TEME</span> and <span class="badge">TLE epoch</span>.</p>
+          <p class="meta">Status: in progress. Stack: FastAPI, sgp4, astropy, React.</p>
+          <ul class="list">
+            <li>Endpoints: <span class="mono">/passes</span>, <span class="mono">/margin</span>, <span class="mono">/export/ics</span></li>
+            <li>Target accuracy: rise, max, set within 2 s vs reference</li>
+            <li>Exports: ICS, CSV, PDF summary</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Latency under load probe</h3>
+          <p>Measures latency, jitter, loss, and short outages at set offered loads. Works with Starlink or any ISP. Produces charts and CSV.</p>
+          <p class="meta">Status: in progress. Stack: Python agent, FastAPI, React.</p>
+          <ul class="list">
+            <li>Stages: idle, 10 percent, 50 percent, 80 percent</li>
+            <li>Detections: micro outages of at least 1 s, availability</li>
+            <li>Outputs: dashboard, CSV export</li>
+          </ul>
+        </article>
+      </div>
+      <p class="note">Local first. Then deploy. No client secrets.</p>
+    </section>
+
+    <section id="projects" aria-labelledby="proj-h">
+      <h2 id="proj-h">Previous and ongoing</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Starlink tracker</h3>
+          <p>Cesium viewer with click to track, dropdown search, and overhead mode. Lessons learned: use primitives for scale, keep UI simple, batch SGP4.</p>
+          <p class="meta">Focus stays on usability and clear labels.</p>
+        </article>
+
+        <article class="card">
+          <h3>Method notes</h3>
+          <p>Short write ups while building:</p>
+          <ul class="list">
+            <li>Frames and time for SGP4</li>
+            <li>FSPL with ITU losses</li>
+            <li>Latency under load and event rules</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="journey" aria-labelledby="journey-h">
+      <h2 id="journey-h">Journey</h2>
+      <div class="grid">
+        <article class="card">
+          <p>
+            EEE graduate from Bangladesh. Got into space systems through NASA online events and GLOBE projects with Aqua and Terra. Self taught with public resources. I learn by building and explaining.
+            Admitted to MSc in Communications Engineering at Politecnico di Torino for 2025 to 2027. I am building tools I want to use. Transparent. Reproducible. Useful for operators and students.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="links" aria-labelledby="links-h">
+      <h2 id="links-h">Links</h2>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>Profiles</h3>
+          <ul class="list">
+            <li><a href="https://github.com/ruddro-roy" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://x.com/royrdro" target="_blank" rel="noopener">X</a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Contact</h3>
+          <p class="meta">DM on X or open a GitHub issue.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p class="note">© <span id="y"></span> Ruddro Roy</p>
+    </footer>
+  </div>
+
+  <script>
+    // year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // theme toggle with data-theme
+    const root = document.documentElement;
+    const btn = document.getElementById('theme');
+
+    // decide initial theme
+    const stored = localStorage.getItem('theme'); // "light" or "dark" or null
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    function applyTheme(mode){
+      // mode = "light" | "dark"
+      root.setAttribute('data-theme', mode);
+      btn.setAttribute('aria-pressed', String(mode === 'dark'));
+    }
+
+    function currentTheme(){
+      return root.getAttribute('data-theme');
+    }
+
+    if(stored === 'light' || stored === 'dark'){
+      applyTheme(stored);
+    } else {
+      applyTheme(prefersDark ? 'dark' : 'light');
+    }
+
+    btn.addEventListener('click', () => {
+      const next = currentTheme() === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
+    });
+
+    // nav active state
+    const navLinks = [...document.querySelectorAll('nav a[href^="#"]')];
+    const sections = document.querySelectorAll('section[id]');
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        const id = e.target.id;
+        const a = navLinks.find(l => l.getAttribute('href') === `#${id}`);
+        if(a){ a.classList.toggle('active', e.isIntersecting); }
+      });
+    }, {root:null, threshold:0.4});
+    sections.forEach(s => io.observe(s));
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'satellite-tracking'
+    project: 'space-situational-awareness'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Gateway Service
+  - job_name: 'satellite-gateway'
+    static_configs:
+      - targets: ['gateway:3000']
+    metrics_path: '/api/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Orbit Microservice
+  - job_name: 'orbit-service'
+    static_configs:
+      - targets: ['orbit-service:5000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Redis Cache
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Frontend Health (Static)
+  - job_name: 'frontend-health'
+    static_configs:
+      - targets: ['frontend:80']
+    metrics_path: '/health'
+    scrape_interval: 60s
+
+  # Static Site Health
+  - job_name: 'static-site-health'
+    static_configs:
+      - targets: ['static-site:80']
+    metrics_path: '/health'
+    scrape_interval: 60s
+
+  # Kubernetes Pods (if deployed on K8s)
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - satellite-production
+            - satellite-staging
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+  # External Services Health
+  - job_name: 'external-apis'
+    static_configs:
+      - targets: ['celestrak.org']
+    metrics_path: '/probe'
+    params:
+      module: [http_2xx]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Cesium Ion API Health
+  - job_name: 'cesium-api'
+    static_configs:
+      - targets: ['api.cesium.com']
+    metrics_path: '/probe'
+    params:
+      module: [http_2xx]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Application-specific metrics
+  - job_name: 'satellite-metrics'
+    static_configs:
+      - targets: ['gateway:3000']
+    metrics_path: '/api/metrics/satellites'
+    scrape_interval: 60s
+    honor_labels: true
+
+  - job_name: 'threat-metrics'
+    static_configs:
+      - targets: ['gateway:3000']
+    metrics_path: '/api/metrics/threats'
+    scrape_interval: 300s  # 5 minutes
+    honor_labels: true
+
+  # Database metrics
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+    scrape_interval: 30s
+
+  # Performance metrics
+  - job_name: 'performance-metrics'
+    static_configs:
+      - targets: ['gateway:3000']
+    metrics_path: '/api/metrics/performance'
+    scrape_interval: 30s

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: satellite-staging
+  labels:
+    name: satellite-staging
+    environment: staging
+    project: satellite-tracking
+    owner: ruddro-roy
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: satellite-production
+  labels:
+    name: satellite-production
+    environment: production
+    project: satellite-tracking
+    owner: ruddro-roy

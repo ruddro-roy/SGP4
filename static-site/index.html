@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ruddro Roy - Advancing space situational awareness through innovative satellite tracking and autonomous systems">
+    <meta name="keywords" content="satellite tracking, space technology, orbital mechanics, autonomous systems, machine learning">
+    <meta name="author" content="Ruddro Roy">
+    
+    <title>Ruddro Roy - I like to think deeply</title>
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent-primary: #00ff88;
+            --accent-secondary: #0066ff;
+            --border-primary: #333333;
+            --border-secondary: #222222;
+            --shadow-light: rgba(0, 255, 136, 0.1);
+            --shadow-dark: rgba(0, 0, 0, 0.5);
+            
+            /* Light mode variables */
+            --light-bg-primary: #ffffff;
+            --light-bg-secondary: #f8f9fa;
+            --light-bg-tertiary: #f1f3f4;
+            --light-text-primary: #1a1a1a;
+            --light-text-secondary: #4a4a4a;
+            --light-text-muted: #888888;
+            --light-border-primary: #e1e1e1;
+            --light-border-secondary: #f0f0f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 16px;
+            scroll-behavior: smooth;
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode {
+            --bg-primary: var(--light-bg-primary);
+            --bg-secondary: var(--light-bg-secondary);
+            --bg-tertiary: var(--light-bg-tertiary);
+            --text-primary: var(--light-text-primary);
+            --text-secondary: var(--light-text-secondary);
+            --text-muted: var(--light-text-muted);
+            --border-primary: var(--light-border-primary);
+            --border-secondary: var(--light-border-secondary);
+        }
+
+        /* Navigation */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        body.light-mode .nav-container {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--text-primary);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-primary);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* Main content */
+        .main-content {
+            margin-top: 80px;
+            min-height: calc(100vh - 80px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section {
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        /* Hero section */
+        .hero {
+            padding: 6rem 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .hero .description {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+
+        /* Sections */
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .about-content, .journey-content {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .about-content p, .journey-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Projects grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .project-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 10px 30px var(--shadow-light);
+            transform: translateY(-5px);
+        }
+
+        .project-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .project-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .project-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Bio section */
+        .bio-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            gap: 2rem;
+        }
+
+        .bio-item {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-secondary);
+        }
+
+        .bio-item h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        /* Contact section */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .contact-item {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .contact-item h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+        }
+
+        .contact-item a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .contact-item a:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-secondary);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .nav {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .hero {
+                padding: 4rem 0;
+            }
+
+            .hero .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        /* Hidden sections */
+        .section-content {
+            display: none;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        /* Code styling */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-container">
+        <div class="nav">
+            <a href="#" class="logo">Ruddro Roy</a>
+            <div class="nav-links">
+                <a href="#about" class="nav-link active" data-section="about">About</a>
+                <a href="#journey" class="nav-link" data-section="journey">My Journey</a>
+                <a href="#tech" class="nav-link" data-section="tech">Technical Background</a>
+                <a href="#projects" class="nav-link" data-section="projects">Projects</a>
+                <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+                <button class="theme-toggle" aria-label="Toggle theme">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1 class="fade-in-up">Ruddro Roy</h1>
+                <p class="subtitle fade-in-up">I like to think deeply</p>
+                <p class="description fade-in-up">
+                    Advancing space situational awareness through autonomous satellite tracking systems, 
+                    orbital mechanics modeling, and innovative threat assessment algorithms.
+                </p>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section">
+            <div class="container">
+                <div class="section-content active">
+                    <h2 class="section-title">About</h2>
+                    <div class="about-content">
+                        <p>
+                            I develop autonomous systems for satellite tracking and space situational awareness, 
+                            focusing on real-time orbital mechanics computation and threat assessment algorithms. 
+                            My work combines advanced astronomical calculations with modern cloud-native architectures 
+                            to create scalable, precise tracking solutions.
+                        </p>
+                        <p>
+                            Currently building comprehensive satellite tracking platforms that handle 20,000+ space objects 
+                            with sub-kilometer accuracy, featuring autonomous data acquisition, conjunction threat analysis, 
+                            and real-time 3D visualization capabilities.
+                        </p>
+                        <p>
+                            The goal is to contribute to space safety through improved tracking accuracy, automated threat 
+                            detection, and accessible visualization tools that can inform future space traffic management systems.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- My Journey Section -->
+        <section id="journey" class="section">
+            <div class="container">
+                <div class="section-content">
+                    <h2 class="section-title">My Journey</h2>
+                    <div class="journey-content">
+                        <p>
+                            I graduated with an Electrical and Electronic Engineering degree from Bangladesh, but honestly, 
+                            my real journey started when I stumbled into NASA's online events. I wasn't planning to fall in 
+                            love with space technology, but there I was, actively participating in Mars missions, moon observation, 
+                            NASA DART, NASA EPDC, and NASA GLOBE citizen science projects from my room in Bangladesh.
+                        </p>
+                        <p>
+                            Here's where things got interesting. While volunteering for NASA GLOBE, I first learned about the 
+                            real-time use of satellites Aqua and Terra. That's when it hit me - I always wanted to work for 
+                            any space agency. I even had this eager dream of attending seminars or webinars in person. But 
+                            reality check: I later realized you can't work or intern at NASA unless you're a US citizen. 
+                            Well, that was disappointing.
+                        </p>
+                        <p>
+                            So there I was, stuck in Bangladesh with limited resources and almost zero opportunities to do 
+                            anything different outside of hardcore academia. What do you do? I focused on self-learning with 
+                            whatever public resources I could find. During this phase, I discovered something about myself - 
+                            I learn way better by listening rather than just reading. Based on this understanding, I started 
+                            teaching on an experimental basis to know myself better.
+                        </p>
+                        <p>
+                            Interestingly, I discovered that I can explain technical stuff in much simpler ways with examples 
+                            from what's actually happening technically. I go very deep with different entangled thoughts that 
+                            often come out as better ideas. Then I work on those ideas, explain them again, and come up with 
+                            even better concepts. I probably could do better in cognitive science related questions because 
+                            when I question things, it follows certain patterns by default.
+                        </p>
+                        <p>
+                            Then I started applying to different universities in many countries - France, Italy, UK, India. 
+                            Successfully got offers from many with partial scholarships or fee waivers. In 2024, I chose 
+                            France and got my visa. But here's where the complex story begins. Due to foreign currency scarcity 
+                            in Bangladesh and bank officers giving me misinformation, I faced several challenges paying for 
+                            accommodation. Even after purchasing air tickets and foreign currency exchange, 7 days before 
+                            departure, I had to cancel everything.
+                        </p>
+                        <p>
+                            Now many people will be saying with raised eyebrows, "What? How many succeeded studying abroad 
+                            while you failed even after getting the visa?" I want to give you just a small hint - there was 
+                            a phase in Bangladesh where even creating a student account for studying abroad was difficult. 
+                            And regarding "many" - so many students process their applications via 3rd party brokers. From 
+                            applying to the university to writing your SOP, they do everything on behalf of you.
+                        </p>
+                        <p>
+                            Here I am, allergic to any broker who does that. This is unfair. My simple logic is: if you can't 
+                            write your Statement of Purpose or Statement of Intent, then in simple words, you don't know 
+                            yourself yet. If you don't know what you want in life, what your goals are, then sorry to say, 
+                            how do you actually continue your study? Because you have to do thesis or internship in your 
+                            last semester or last year of university.
+                        </p>
+                        <p>
+                            The story is very complex, but I want to say that I did predictions based on my entangled thoughts 
+                            that this problem might arise in my career because I was noticing how some banking officials were 
+                            giving misinformation. I calculated every step, and yes, not only that - I've noticed many such 
+                            things even before happening. That's why sometimes I say I could have done better in cognitive 
+                            science related fields.
+                        </p>
+                        <p>
+                            Okay, enough about others. I am still actively working on myself, learning and trying to implement. 
+                            Currently enrolled (September 2025) in MSc program in Communications Engineering at PoliTO as an 
+                            international student, waiting for visa approval. And regarding my current project, it was sparkling 
+                            since I knew about those two satellites Aqua and Terra. Now it's time for building cool stuff.
+                        </p>
+                        <p>
+                            No one can ignore technology, even if they want to. That's why my philosophy is to create an 
+                            autonomous utopian future. However, the current hype is AI, but if you think AI means only chatbots 
+                            or writing tools, then you are again mistaken. There's so much more to explore and build.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Background Section -->
+        <section id="tech" class="section">
+            <div class="container">
+                <div class="section-content">
+                    <h2 class="section-title">Technical Background</h2>
+                    <div class="bio-content">
+                        <div class="bio-item">
+                            <h3>What I'm Actually Building</h3>
+                            <p>
+                                Space situational awareness systems that don't just track satellites but predict where things 
+                                might go wrong. I'm talking autonomous satellite tracking, orbital mechanics modeling that 
+                                actually works in real-time, and threat assessment algorithms that can tell you if two objects 
+                                might have a bad day in space. Plus real-time 3D visualization because why just have data 
+                                when you can see it happening?
+                            </p>
+                        </div>
+
+                        <div class="bio-item">
+                            <h3>My Technical Arsenal</h3>
+                            <p>
+                                <strong>Languages I Think In:</strong> TypeScript, Python, Rust, Go<br>
+                                <strong>Frameworks I Live With:</strong> React, Node.js, Flask, FastAPI<br>
+                                <strong>Orbital Mechanics Tools:</strong> Skyfield, SGP4, Astropy, GMAT<br>
+                                <strong>Making Things Visual:</strong> CesiumJS, Three.js, WebGL<br>
+                                <strong>Infrastructure That Actually Works:</strong> Docker, Kubernetes, MongoDB, Redis
+                            </p>
+                            <p>
+                                But honestly, tools are just tools. What matters is understanding how satellites actually 
+                                move, how to predict their paths, and how to build systems that don't break when you're 
+                                tracking 20,000+ objects simultaneously.
+                            </p>
+                        </div>
+
+                        <div class="bio-item">
+                            <h3>Current Research & Development</h3>
+                            <p>
+                                I'm developing next-generation autonomous satellite tracking systems with sub-kilometer accuracy. 
+                                Not because it sounds cool, but because current systems often miss critical details. I'm also 
+                                investigating machine learning approaches for conjunction prediction - basically teaching computers 
+                                to predict when satellites might crash into each other before it happens.
+                            </p>
+                            <p>
+                                Plus, I'm creating open-source tools for space situational awareness because this stuff shouldn't 
+                                be locked behind corporate walls. Space affects everyone, so the tools to understand it should 
+                                be accessible to everyone.
+                            </p>
+                        </div>
+
+                        <div class="bio-item">
+                            <h3>Why This Actually Matters</h3>
+                            <p>
+                                I'm building accessible tools for space safety research, contributing to open-source astronomical 
+                                software, and advancing automated threat detection for space traffic management. Think of it as 
+                                building the air traffic control system for space - except space is much bigger, objects move 
+                                much faster, and there's no room for error.
+                            </p>
+                            <p>
+                                The goal isn't just to track things, but to make space safer for future missions, whether 
+                                they're scientific research, commercial ventures, or human exploration. Because honestly, 
+                                we're going to need clean orbital highways if we want to keep exploring.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="section">
+            <div class="container">
+                <div class="section-content">
+                    <h2 class="section-title">Projects</h2>
+                    <div class="projects-grid">
+                        <div class="project-card">
+                            <h3>Satellite Tracking Platform</h3>
+                            <p>
+                                Real-time tracking system for 20,000+ satellites with autonomous threat assessment, 
+                                precise orbital mechanics using Skyfield/SGP4, and cloud-native microservices architecture.
+                            </p>
+                            <div class="project-status">In Development</div>
+                        </div>
+
+                        <div class="project-card">
+                            <h3>Orbital Mechanics Engine</h3>
+                            <p>
+                                Python-based microservice providing high-precision orbital calculations, pass predictions, 
+                                and conjunction analysis using advanced astronomical algorithms and distributed caching.
+                            </p>
+                            <div class="project-status">Active Development</div>
+                        </div>
+
+                        <div class="project-card">
+                            <h3>Autonomous Data Pipeline</h3>
+                            <p>
+                                Self-healing data acquisition system with intelligent token rotation, adaptive rate limiting, 
+                                and automatic failover capabilities for continuous satellite tracking operations.
+                            </p>
+                            <div class="project-status">Testing Phase</div>
+                        </div>
+
+                        <div class="project-card">
+                            <h3>Threat Assessment AI</h3>
+                            <p>
+                                Machine learning models for predicting satellite conjunctions, debris collision risks, 
+                                and space weather impacts on orbital mechanics with probabilistic risk scoring.
+                            </p>
+                            <div class="project-status">Research Phase</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section">
+            <div class="container">
+                <div class="section-content">
+                    <h2 class="section-title">Contact</h2>
+                    <div class="contact-grid">
+                        <div class="contact-item">
+                            <h3>GitHub</h3>
+                            <a href="https://github.com/ruddro-roy" target="_blank">github.com/ruddro-roy</a>
+                        </div>
+
+                        <div class="contact-item">
+                            <h3>X (Twitter)</h3>
+                            <a href="https://x.com/royrdro" target="_blank">@royrdro</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Ruddro Roy. Building the future of space situational awareness.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.querySelector('.theme-toggle');
+        const body = document.body;
+
+        // Check for saved theme preference or default to dark mode
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            body.classList.add('light-mode');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            const isLight = body.classList.contains('light-mode');
+            themeToggle.textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        });
+
+        // Navigation functionality
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sectionContents = document.querySelectorAll('.section-content');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all nav links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                link.classList.add('active');
+                
+                // Hide all section contents
+                sectionContents.forEach(content => content.classList.remove('active'));
+                
+                // Show selected section content
+                const targetSection = link.getAttribute('data-section');
+                const targetContent = document.querySelector(`#${targetSection} .section-content`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
+        });
+
+        // Smooth scrolling and fade-in animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections for animation
+        document.querySelectorAll('.section, .hero > *').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

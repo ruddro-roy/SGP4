@@ -1,0 +1,222 @@
+groups:
+  - name: satellite-tracking.rules
+    rules:
+      # Service Health Alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: satellite-tracking
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 2 minutes"
+          runbook_url: "https://docs.satellite-tracking.com/runbooks/service-down"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High error rate detected in {{ $labels.job }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
+
+      # Resource Usage Alerts
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is {{ $value | humanizePercentage }} available on {{ $labels.instance }}"
+
+      # Database Alerts
+      - alert: DatabaseConnectionsHigh
+        expr: mongodb_connections{state="current"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High database connections"
+          description: "MongoDB has {{ $value }} active connections"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      # Application-specific Alerts
+      - alert: SatelliteDataStale
+        expr: time() - satellite_data_last_update_timestamp > 3600
+        for: 1m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Satellite data is stale"
+          description: "Satellite data hasn't been updated for {{ $value | humanizeDuration }}"
+
+      - alert: ThreatAnalysisFailure
+        expr: increase(threat_analysis_failures_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Multiple threat analysis failures"
+          description: "{{ $value }} threat analysis failures in the last hour"
+
+      - alert: CriticalThreatDetected
+        expr: satellite_threats_critical > 0
+        for: 0s
+        labels:
+          severity: critical
+          service: satellite-tracking
+        annotations:
+          summary: "Critical satellite threat detected"
+          description: "{{ $value }} critical threats detected requiring immediate attention"
+
+      - alert: HighConjunctionRisk
+        expr: satellite_conjunction_risk_score > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High conjunction risk detected"
+          description: "Conjunction risk score is {{ $value }}"
+
+      # External Dependencies
+      - alert: CelestrakAPIDown
+        expr: probe_success{instance="celestrak.org"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Celestrak API is unreachable"
+          description: "Unable to reach Celestrak API for satellite data updates"
+
+      - alert: CesiumAPIDown
+        expr: probe_success{instance="api.cesium.com"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Cesium API is unreachable"
+          description: "Unable to reach Cesium API for visualization services"
+
+      # Performance Alerts
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Slow response times detected"
+          description: "95th percentile response time is {{ $value }}s"
+
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate is {{ $value }} requests/second"
+
+      # Business Logic Alerts
+      - alert: LowSatelliteCount
+        expr: satellite_count_active < 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Low active satellite count"
+          description: "Only {{ $value }} active satellites being tracked"
+
+      - alert: OrbitPropagationErrors
+        expr: increase(orbit_propagation_errors_total[1h]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High orbit propagation error rate"
+          description: "{{ $value }} orbit propagation errors in the last hour"
+
+      # Security Alerts
+      - alert: UnauthorizedAccess
+        expr: increase(http_requests_total{status="401"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "High unauthorized access attempts"
+          description: "{{ $value }} unauthorized access attempts in 5 minutes"
+
+      - alert: TokenRotationFailure
+        expr: token_rotation_last_success_timestamp < (time() - 86400)
+        for: 1m
+        labels:
+          severity: critical
+          service: satellite-tracking
+        annotations:
+          summary: "Token rotation failure"
+          description: "Token rotation hasn't succeeded for {{ $value | humanizeDuration }}"
+
+      # System Health
+      - alert: ServiceHealthDegraded
+        expr: service_health_score < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: satellite-tracking
+        annotations:
+          summary: "Service health degraded"
+          description: "Overall service health score is {{ $value }}"
+
+      - alert: AutonomousManagerDown
+        expr: autonomous_manager_active == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: satellite-tracking
+        annotations:
+          summary: "Autonomous manager is not active"
+          description: "The autonomous management system is not running"
