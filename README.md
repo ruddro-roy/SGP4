@@ -133,4 +133,4 @@ This is experimental software for educational and research purposes. Do not use 
 
 ## License
 
-MIT License - Feel free to use, modify, and learn from this code.
+Feel free to use, modify, and learn from this code.
