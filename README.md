@@ -17,6 +17,14 @@ Space is getting crowded. With thousands of satellites and debris pieces orbitin
 
 This project is actively under construction. Here's what's working and what's not:
 
+### Advanced Orbital Analysis Capabilities
+
+The system now includes sophisticated orbital mechanics analysis with B* parameter sensitivity studies and trajectory propagation:
+
+![3D Orbital Trajectories and B* Sensitivity Analysis](https://github.com/user-attachments/assets/your-image-id-here)
+
+*Real orbital propagation results showing 3D trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
+
 ### What's Done
 - Basic project structure with microservices architecture
 - Docker containerization setup
