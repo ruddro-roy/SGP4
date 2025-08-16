@@ -22,7 +22,8 @@ This project is actively under construction. Here's what's working and what's no
 The system now includes orbital mechanics analysis with B* parameter sensitivity studies and trajectory propagation:
 
 ![3D Orbital Trajectories and B* Sensitivity Analysis]
-<img width="1440" height="864" alt="Figure_1" src="https://github.com/user-attachments/assets/76477ca6-30b7-4d4b-8a03-863e0c74ec6f" />
+
+<img width="1440" height="864" alt="Figure_2" src="https://github.com/user-attachments/assets/34fdd44d-115c-4af8-9127-1ad02be31e00" />
 
 
 *Real orbital propagation results showing 3D trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
