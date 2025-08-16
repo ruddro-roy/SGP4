@@ -9,6 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from tle_parser import TLEParser
+from sgp4.io import twoline2rv
+from sgp4.api import WGS84
+from datetime import timedelta
 
 def fix_epoch_year(epoch_year):
     """
@@ -23,128 +26,147 @@ def fix_epoch_year(epoch_year):
     else:
         raise ValueError(f"Invalid epoch year: {epoch_year}")
 
-def sensitivity_analyzer(parser, tle_data, bstar_variations=[-10, -5, 0, 5, 10]):
+def sensitivity_analyzer(parser, tle_data, bstar_variations=[-50, -25, -10, 0, 10, 25, 50]):
     """
-    Analyze sensitivity to B* drag coefficient variations
-    Counters drag overprediction in high solar activity
+    Analyze sensitivity to B* drag coefficient variations using SGP4.
+    Extended analysis over multiple days to show cumulative effects.
     """
-    print(f"\n⚠️  PITFALLS & SENSITIVITY ANALYSIS")
+    print(f"\n⚠️  PITFALLS & SENSITIVITY ANALYSIS (with SGP4)")
     print("=" * 80)
-    
-    # Extract epoch year for Y2K demonstration
-    epoch_year = tle_data['epoch_year']
-    fixed_year = fix_epoch_year(epoch_year)
-    
-    print(f"\n📅 EPOCH HANDLING (Y2K Fix):")
-    print(f"   Raw epoch year: {epoch_year:02d}")
-    print(f"   Fixed year: {fixed_year}")
-    print(f"   Rule: Years 57-99 → 1900s, Years 00-56 → 2000s")
-    
-    # B* sensitivity analysis
+
     original_bstar = tle_data.get('bstar_drag', 0.0)
-    print(f"\n🎯 DRAG OVERPREDICTION ANALYSIS:")
+    print(f"\n🎯 DRAG SENSITIVITY ANALYSIS:")
     print(f"   Original B*: {original_bstar:.8f}")
-    print(f"   Testing B* variations: ±10% to counter high solar activity effects")
-    
-    # Time points for propagation (6 hours)
-    time_points = np.linspace(0, 360, 37)  # 0 to 6 hours, 10-minute intervals
-    
-    # Store trajectories for each B* variation
+    print(f"   Applying variations: {bstar_variations}%")
+    print(f"   Analysis period: 7 days (drag effects accumulate over time)")
+
+    # Extended time period - 7 days with 3-hour intervals to show cumulative drag effects
+    time_points = np.linspace(0, 7*24*60, 57)  # 0 to 7 days, 3-hour intervals
     trajectories = {}
     position_divergence = []
+    altitude_data = {}
     nominal_trajectory = None
-    
-    # First pass: get nominal trajectory (0% variation)
-    for variation in bstar_variations:
-        # Modify B* coefficient
-        modified_tle = tle_data.copy()
-        modified_bstar = original_bstar * (1 + variation/100.0)
-        modified_tle['bstar_drag'] = modified_bstar
+
+    print(f"\n   Processing B* variations...")
+    for i, variation in enumerate(bstar_variations):
+        modified_tle_data = tle_data.copy()
+        modified_bstar = original_bstar * (1 + variation / 100.0)
+        modified_tle_data['bstar_drag'] = modified_bstar
         
-        # Propagate orbit with modified B*
+        print(f"   • B* {variation:+3d}%: {modified_bstar:.8f} (vs nominal {original_bstar:.8f})")
+
+        line1, line2 = parser.tle_data_to_lines(modified_tle_data)
+        satellite = twoline2rv(line1, line2, WGS84)
+
         positions = []
+        altitudes = []
+        epoch_datetime = tle_data['epoch_datetime']
+        
         for t in time_points:
-            result = parser.propagate_orbit(modified_tle, t)
-            pos = result['position_teme_km']
-            positions.append([pos['x'], pos['y'], pos['z']])
+            current_time = epoch_datetime + timedelta(minutes=t)
+            jd, fr = parser.datetime_to_jd_fr(current_time)
+            error, r, v = satellite.sgp4(jd, fr)
+            if error == 0:
+                positions.append(r)
+                altitude = np.linalg.norm(r) - 6378.137  # Earth radius
+                altitudes.append(altitude)
+            else:
+                positions.append([0, 0, 0])
+                altitudes.append(0)
         
         trajectories[variation] = np.array(positions)
-        
-        # Store nominal trajectory for comparison
+        altitude_data[variation] = np.array(altitudes)
+
         if variation == 0:
             nominal_trajectory = np.array(positions)
-    
-    # Second pass: calculate divergences
+            nominal_altitudes = np.array(altitudes)
+
+    # Calculate divergences with more detailed analysis
+    print(f"\n   Position Divergence Analysis:")
     for variation in bstar_variations:
         if variation != 0:
             divergence = np.linalg.norm(trajectories[variation] - nominal_trajectory, axis=1)
             max_divergence = np.max(divergence)
+            final_divergence = divergence[-1]
+            avg_divergence = np.mean(divergence)
+            
+            # Altitude difference analysis
+            alt_diff = altitude_data[variation] - nominal_altitudes
+            final_alt_diff = alt_diff[-1]
+            
             position_divergence.append((variation, max_divergence))
-            print(f"   B* {variation:+3d}%: Max position divergence = {max_divergence:.2f} km")
+            print(f"     B* {variation:+3d}%: Max={max_divergence:.1f}km, Final={final_divergence:.1f}km, Avg={avg_divergence:.1f}km, Alt_diff={final_alt_diff:.1f}km")
     
-    # Plot 3D trajectories
-    fig = plt.figure(figsize=(15, 10))
+    # Plot comprehensive analysis
+    fig = plt.figure(figsize=(20, 12))
     
-    # 3D trajectory plot
+    # 3D trajectory plot (first 24 hours only for clarity)
     ax1 = fig.add_subplot(221, projection='3d')
-    colors = ['red', 'orange', 'blue', 'green', 'purple']
+    colors = plt.cm.RdYlBu(np.linspace(0, 1, len(bstar_variations)))
+    
+    # Show only first 24 hours for 3D plot clarity
+    hours_24_points = int(24 * 60 / (7*24*60/57))  # First 24 hours of data points
     
     for i, variation in enumerate(bstar_variations):
-        traj = trajectories[variation]
+        traj = trajectories[variation][:hours_24_points]
         label = f"B* {variation:+d}%" if variation != 0 else "Nominal B*"
+        linewidth = 3 if variation == 0 else 1.5
+        alpha = 1.0 if variation == 0 else 0.7
         ax1.plot(traj[:, 0], traj[:, 1], traj[:, 2], 
-                color=colors[i], label=label, linewidth=2 if variation == 0 else 1)
+                color=colors[i], label=label, linewidth=linewidth, alpha=alpha)
     
     ax1.set_xlabel('X (km)')
     ax1.set_ylabel('Y (km)')
     ax1.set_zlabel('Z (km)')
-    ax1.set_title('3D Orbital Trajectories\nB* Sensitivity Analysis')
-    ax1.legend()
+    ax1.set_title('3D Orbital Trajectories (First 24 Hours)\nB* Sensitivity Analysis')
+    ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     
     # Position divergence plot
     ax2 = fig.add_subplot(222)
     if position_divergence:
         variations, divergences = zip(*position_divergence)
-        ax2.bar(variations, divergences, color='skyblue', alpha=0.7)
+        bars = ax2.bar(variations, divergences, color='skyblue', alpha=0.7, edgecolor='navy')
         ax2.set_xlabel('B* Variation (%)')
         ax2.set_ylabel('Max Position Divergence (km)')
-        ax2.set_title('Position Divergence vs B* Variation')
+        ax2.set_title('Maximum Position Divergence vs B* Variation')
         ax2.grid(True, alpha=0.3)
+        
+        # Add value labels on bars
+        for bar, div in zip(bars, divergences):
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
+                    f'{div:.1f}', ha='center', va='bottom', fontsize=9)
     
     # Altitude vs time for different B* values
     ax3 = fig.add_subplot(223)
-    earth_radius = 6378.137
+    time_days = time_points / (24 * 60)  # Convert to days
     
     for i, variation in enumerate(bstar_variations):
-        traj = trajectories[variation]
-        altitudes = np.linalg.norm(traj, axis=1) - earth_radius
+        altitudes = altitude_data[variation]
         label = f"B* {variation:+d}%" if variation != 0 else "Nominal B*"
-        ax3.plot(time_points, altitudes, color=colors[i], label=label, 
-                linewidth=2 if variation == 0 else 1)
+        linewidth = 3 if variation == 0 else 1.5
+        alpha = 1.0 if variation == 0 else 0.8
+        ax3.plot(time_days, altitudes, color=colors[i], label=label, 
+                linewidth=linewidth, alpha=alpha)
     
-    ax3.set_xlabel('Time (minutes)')
+    ax3.set_xlabel('Time (days)')
     ax3.set_ylabel('Altitude (km)')
-    ax3.set_title('Altitude Decay Analysis')
-    ax3.legend()
+    ax3.set_title('Altitude Evolution Over 7 Days')
+    ax3.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax3.grid(True, alpha=0.3)
     
-    # Orbital period variation
+    # Position divergence evolution over time
     ax4 = fig.add_subplot(224)
-    period_variations = []
+    for i, variation in enumerate(bstar_variations):
+        if variation != 0:
+            divergence = np.linalg.norm(trajectories[variation] - nominal_trajectory, axis=1)
+            label = f"B* {variation:+d}%"
+            ax4.plot(time_days, divergence, color=colors[i], label=label, linewidth=1.5)
     
-    for variation in bstar_variations:
-        modified_tle = tle_data.copy()
-        modified_bstar = original_bstar * (1 + variation/100.0)
-        modified_tle['bstar_drag'] = modified_bstar
-        
-        # Calculate period from mean motion
-        period = 1440 / modified_tle['mean_motion_rev_per_day']  # minutes
-        period_variations.append(period)
-    
-    ax4.plot(bstar_variations, period_variations, 'o-', color='red', linewidth=2)
-    ax4.set_xlabel('B* Variation (%)')
-    ax4.set_ylabel('Orbital Period (minutes)')
-    ax4.set_title('Period Sensitivity to Drag')
+    ax4.set_xlabel('Time (days)')
+    ax4.set_ylabel('Position Divergence (km)')
+    ax4.set_title('Position Divergence Evolution')
+    ax4.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax4.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -168,7 +190,14 @@ def main():
     
     # Parse TLE
     print(f"\n📡 Parsing TLE for: {iss_name}")
+    print(f"   Original Line 1: {iss_line1}")
+    print(f"   Original Line 2: {iss_line2}")
     tle_data = parser.parse_tle(iss_line1, iss_line2, iss_name)
+    
+    # Test TLE reconstruction
+    reconstructed_line1, reconstructed_line2 = parser.tle_data_to_lines(tle_data)
+    print(f"   Reconstructed L1: {reconstructed_line1}")
+    print(f"   Reconstructed L2: {reconstructed_line2}")
     
     print(f"   NORAD ID: {tle_data['norad_id']}")
     print(f"   Inclination: {tle_data['inclination_deg']:.4f}°")
