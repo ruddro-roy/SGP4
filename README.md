@@ -19,11 +19,13 @@ This project is actively under construction. Here's what's working and what's no
 
 ### Advanced Orbital Analysis Capabilities
 
-The system now includes sophisticated orbital mechanics analysis with B* parameter sensitivity studies and trajectory propagation:
+The system now includes orbital mechanics analysis with B* parameter sensitivity studies and trajectory propagation:
 
-![3D Orbital Trajectories and B* Sensitivity Analysis](https://github.com/user-attachments/assets/your-image-id-here)
+## Orbital Trajectories and B* Sensitivity Analysis
+<img width="1400" height="600" alt="Figure_8" src="https://github.com/user-attachments/assets/6d54e0cc-f643-43c5-b3f4-3e9ebeba85a0" />
 
-*Real orbital propagation results showing 3D trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
+
+*Real orbital propagation results showing trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
 
 ### What's Done
 - Basic project structure with microservices architecture
