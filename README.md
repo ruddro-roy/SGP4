@@ -25,7 +25,7 @@ The system now includes orbital mechanics analysis with B* parameter sensitivity
 <img width="1400" height="600" alt="Figure_8" src="https://github.com/user-attachments/assets/6d54e0cc-f643-43c5-b3f4-3e9ebeba85a0" />
 
 
-*Real orbital propagation results showing 3D trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
+*Real orbital propagation results showing trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
 
 ### What's Done
 - Basic project structure with microservices architecture
