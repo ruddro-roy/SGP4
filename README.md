@@ -1,8 +1,8 @@
-# SGP4 Satellite Tracking Platform
+# Cloud-Native Space Situational Awareness
 
 ## What I've Actually Built
 
-I've created a comprehensive satellite tracking and orbital mechanics platform that goes far beyond basic tracking. This system combines traditional SGP4 propagation with cutting-edge differentiable computing and advanced orbital analysis capabilities.
+This project is my attempt to build a satellite tracking platform that goes beyond the basics. The goal is to combine the proven SGP4 model with differentiable computing, which would allow for ML-powered orbital corrections. Right now, this is very much in the experimental phase. The core propagation is functional, but the machine learning components are still under development.
 
 ## Why This Project Exists
 
