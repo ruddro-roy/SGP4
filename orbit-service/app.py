@@ -16,13 +16,18 @@ import redis
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from skyfield.api import load, Topos
-from skyfield.sgp4lib import EarthSatellite
-from sgp4.api import Satrec, WGS84
-from sgp4.io import twoline2rv
+from sgp4.api import Satrec
+from sgp4 import exporter
 import requests
 from pydantic import BaseModel, Field
 import structlog
+import torch
+from differentiable_sgp4_torch import DifferentiableSGP4
+from skyfield.api import load, Topos, EarthSatellite
+from constants import ISS_TLE
+
+# Initialize Skyfield timescale
+ts = load.timescale()
 
 # Configure structured logging
 structlog.configure(
@@ -69,8 +74,7 @@ except Exception as e:
     logger.error(f"Redis connection failed: {e}")
     redis_client = None
 
-# Initialize Skyfield
-ts = load.timescale()
+# Initialize thread pool
 executor = ThreadPoolExecutor(max_workers=8)
 
 class SatelliteData(BaseModel):
@@ -114,6 +118,13 @@ class AutonomousSatelliteTracker:
         self.tle_data = {}
         self.threat_assessments = []
         self.last_update = None
+        try:
+            self.redis_client = redis.from_url(config.REDIS_URL)
+            self.redis_client.ping()
+            logger.info("Redis connection successful.")
+        except (redis.exceptions.RedisError, AttributeError) as e:
+            logger.warning(f"Redis connection failed or not configured: {e}. Caching will be disabled.")
+            self.redis_client = None
         
     async def fetch_tle_data(self, source: str = 'active') -> Dict[int, SatelliteData]:
         """Fetch TLE data from CELESTRAK with autonomous error handling"""
@@ -130,7 +141,12 @@ class AutonomousSatelliteTracker:
             
             # Check cache first
             cache_key = f"tle_data:{source}"
-            cached_data = redis_client.get(cache_key) if redis_client else None
+            try:
+                cached_data = self.redis_client.get(cache_key) if self.redis_client else None
+            except redis.exceptions.ConnectionError as e:
+                logger.warning(f"Redis connection failed: {e}. Caching will be disabled.")
+                self.redis_client = None
+                cached_data = None
             
             if cached_data:
                 logger.info(f"Using cached TLE data for {source}")
@@ -190,8 +206,11 @@ class AutonomousSatelliteTracker:
                         continue
             
             # Cache the results
-            if redis_client:
-                redis_client.setex(cache_key, config.CACHE_TTL, json.dumps(satellites))
+            if self.redis_client:
+                try:
+                    self.redis_client.setex(cache_key, config.CACHE_TTL, json.dumps(satellites))
+                except redis.exceptions.RedisError as e:
+                    logger.warning(f"Could not cache TLE data to Redis: {e}")
             
             logger.info(f"Fetched {len(satellites)} satellites from {source}")
             return satellites
@@ -504,6 +523,148 @@ def assess_conjunction_threats():
         logger.error(f"Failed to assess threats: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/differentiable-sgp4/demo', methods=['GET'])
+def differentiable_sgp4_demo():
+    """Interactive demo of differentiable SGP4 with gradient computation"""
+    try:
+        # Get parameters from request
+        norad_id = request.args.get('norad_id', '25544')  # Default to ISS
+        time_points = int(request.args.get('time_points', 10))
+        max_time_hours = float(request.args.get('max_time_hours', 24))
+        
+        # Get satellite data
+        satellites = {}
+        try:
+            satellites = asyncio.run(tracker.fetch_tle_data('active'))
+        except Exception as e:
+            logger.warning(f"TLE fetch failed, using ISS fallback: {e}")
+        norad_id_int = int(norad_id)
+
+        if norad_id_int not in satellites:
+            if norad_id_int == 25544:
+                logger.warning("Using hardcoded ISS TLE fallback for demo endpoint.")
+                satellite_data = ISS_TLE
+            else:
+                return jsonify({"error": f"Satellite {norad_id} not found and no fallback available"}), 404
+        else:
+            satellite_data = satellites[norad_id_int]
+        
+        # Create differentiable SGP4 instance
+        dsgp4 = DifferentiableSGP4(satellite_data['line1'], satellite_data['line2'])
+        
+        # Generate time points for demonstration
+        max_time_minutes = max_time_hours * 60
+        time_values = torch.linspace(0, max_time_minutes, time_points, requires_grad=True)
+        
+        # Propagate positions
+        positions = []
+        velocities = []
+        gradients = []
+        
+        for i, t in enumerate(time_values):
+            # Forward pass
+            r, v = dsgp4(t)
+            
+            # Calculate orbital radius (distance from Earth center)
+            radius = torch.norm(r)
+            
+            # Compute gradient of radius w.r.t. time
+            radius.backward(retain_graph=True)
+            gradient = t.grad.item() if t.grad is not None else 0.0
+            
+            # Store results
+            positions.append({
+                'time_minutes': t.item(),
+                'time_hours': t.item() / 60.0,
+                'position_km': r.detach().numpy().tolist(),
+                'velocity_km_s': v.detach().numpy().tolist(),
+                'orbital_radius_km': radius.item(),
+                'radius_gradient': gradient,
+                'altitude_km': radius.item() - 6378.137  # Earth radius
+            })
+            
+            # Clear gradients for next iteration
+            if t.grad is not None:
+                t.grad.zero_()
+        
+        # Test ML corrections
+        dsgp4.train()  # Enable training mode for corrections
+        corrected_positions = []
+        
+        for i, t in enumerate(time_values):
+            r_corrected, v_corrected = dsgp4(t)
+            corrected_positions.append({
+                'time_minutes': t.item(),
+                'position_km': r_corrected.detach().numpy().tolist(),
+                'velocity_km_s': v_corrected.detach().numpy().tolist(),
+                'orbital_radius_km': torch.norm(r_corrected).item()
+            })
+        
+        dsgp4.eval()  # Disable training mode
+        
+        # Calculate correction magnitudes
+        correction_analysis = []
+        for i in range(len(positions)):
+            baseline_pos = np.array(positions[i]['position_km'])
+            corrected_pos = np.array(corrected_positions[i]['position_km'])
+            correction_magnitude = np.linalg.norm(corrected_pos - baseline_pos)
+            
+            correction_analysis.append({
+                'time_minutes': positions[i]['time_minutes'],
+                'correction_magnitude_km': correction_magnitude,
+                'correction_vector_km': (corrected_pos - baseline_pos).tolist()
+            })
+        
+        # Batch propagation test
+        batch_times = torch.tensor([0.0, 360.0, 720.0, 1080.0, 1440.0])
+        r_batch, v_batch = dsgp4.propagate_batch(batch_times)
+        
+        batch_results = []
+        for i, t in enumerate(batch_times):
+            batch_results.append({
+                'time_minutes': t.item(),
+                'position_km': r_batch[i].detach().numpy().tolist(),
+                'velocity_km_s': v_batch[i].detach().numpy().tolist(),
+                'orbital_radius_km': torch.norm(r_batch[i]).item()
+            })
+        
+        # Satellite metadata
+        satellite_info = {
+            'norad_id': norad_id_int,
+            'name': satellite_data['name'],
+            'epoch': satellite_data['epoch'],
+            'mean_motion': satellite_data['mean_motion'],
+            'inclination_deg': satellite_data['inclination'],
+            'eccentricity': satellite_data['eccentricity']
+        }
+        
+        return jsonify({
+            'satellite_info': satellite_info,
+            'demo_parameters': {
+                'time_points': time_points,
+                'max_time_hours': max_time_hours,
+                'differentiable': True,
+                'ml_corrections_enabled': True
+            },
+            'baseline_propagation': positions,
+            'corrected_propagation': corrected_positions,
+            'correction_analysis': correction_analysis,
+            'batch_propagation': batch_results,
+            'capabilities': {
+                'gradient_computation': True,
+                'ml_corrections': True,
+                'batch_processing': True,
+                'pytorch_autograd': True
+            },
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Differentiable SGP4 demo failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.errorhandler(Exception)
 def handle_error(error):
     """Global error handler"""
@@ -515,4 +676,4 @@ def handle_error(error):
 
 if __name__ == '__main__':
     logger.info("Starting Orbit Microservice")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5001, debug=False)
