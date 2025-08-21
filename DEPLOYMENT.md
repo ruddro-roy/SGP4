@@ -385,7 +385,3 @@ docker scan satellite-tracking-gateway
 - **GitHub Issues**: Report bugs and feature requests
 - **Discussions**: Ask questions and share ideas
 - **Contributing**: See `CONTRIBUTING.md`
-
----
-
-**🚀 Happy satellite tracking! Building the future of space situational awareness.**
