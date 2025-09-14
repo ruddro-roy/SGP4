@@ -39,9 +39,18 @@ Version_01
 
 https://github.com/user-attachments/assets/97c8b38c-d513-4087-bd00-1198b94c4b63
 
-### Orbital Trajectories and Analysis Results
-<img width="1400" height="600" alt="Figure_8" src="https://github.com/user-attachments/assets/6d54e0cc-f643-43c5-b3f4-3e9ebeba85a0" />
+### B* Drag Coefficient Parsing Accuracy Analysis
+<img width="4767" height="1779" alt="bstar_parsing_accuracy" src="https://github.com/user-attachments/assets/93dcceac-e813-4e7c-b721-b46ce8ccdf05" />
 
+I’ve replaced my older figure with this updated plot, which compares my parsed TLE B* values against the official reference SGP4 library in three representative cases:
+• ISS (low B* ≈ −1.16×10⁻⁵),
+• A high‑drag satellite (B* ≈ 5.43×10⁻⁴),
+• A deep‑space object (B* = 0).
+
+The bar chart on the left shows that both my implementation (blue) and the reference SGP4 (pink) yield effectively identical B* values for each scenario. The right panel confirms these B* fields are parsed at near‑zero (machine‑precision) error.
+
+Although this demonstrates that my TLE reading and B* handling now match the reference standard, I’m still refining other parts of the pipeline, such as drag propagation details and frame/time transformations. So these results are not my final release. Expect further improvements in future updates.
+–––––––––––––––––––––––––
 *Real orbital propagation results showing trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
 
 ## How to Run This System
