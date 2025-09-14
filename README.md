@@ -50,8 +50,7 @@ I’ve replaced my older figure with this updated plot, which compares my parsed
 The bar chart on the left shows that both my implementation (blue) and the reference SGP4 (pink) yield effectively identical B* values for each scenario. The right panel confirms these B* fields are parsed at near‑zero (machine‑precision) error.
 
 Although this demonstrates that my TLE reading and B* handling now match the reference standard, I’m still refining other parts of the pipeline, such as drag propagation details and frame/time transformations. So these results are not my final release. Expect further improvements in future updates.
-–––––––––––––––––––––––––
-*Real orbital propagation results showing trajectory visualization, B* drag coefficient sensitivity analysis, altitude decay patterns, and period sensitivity to atmospheric drag variations.*
+
 
 ## How to Run This System
 
