@@ -73,7 +73,8 @@ class SGP4Propagator:
             
         except (ValueError, IndexError) as e:
             self.error = 4
-            print(f"TLE parsing error: {e}")
+            import logging
+            logging.getLogger(__name__).error(f"TLE parsing error: {e}")
 
     def exp_to_dec(self, mant_str, exp_str):
         """Parse TLE exponential notation correctly"""
@@ -299,12 +300,24 @@ class SGP4Propagator:
         return r_teme, v_teme
 
 def validate_reference_sgp4():
-    """Validate against user's test cases"""
-    print("🚀 Reference SGP4 Validation - User Specifications")
-    print("=" * 55)
+    """
+    Validate reference SGP4 implementation against test cases.
     
-    # Test Case 1: Near Earth test from user
-    print("\n📡 Test Case 1: Vanguard 2 (Near Earth)")
+    Returns
+    -------
+    tuple
+        (propagator, test_passed) where test_passed is True if validation succeeded
+    
+    References
+    ----------
+    Test case from Vallado et al. (2006) Vanguard 2 satellite.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Reference SGP4 Validation")
+    
+    # Test Case: Vanguard 2 (Near Earth)
     line1 = "1 00005U 58002B   00179.78495062  .00000023  00000-0  28098-4 0  4753"
     line2 = "2 00005  34.2682 348.7242 1859667 331.7664 19.3264 10.82419157413667"
     
@@ -323,41 +336,33 @@ def validate_reference_sgp4():
                 r_error = math.sqrt(sum((r[i] - expected_r[i])**2 for i in range(3)))
                 v_error = math.sqrt(sum((v_kms[i] - expected_v[i])**2 for i in range(3)))
                 
-                print(f"  ⏰ At tsince = 0:")
-                print(f"    Position: [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] km")
-                print(f"    Expected: [{expected_r[0]:.2f}, {expected_r[1]:.2f}, {expected_r[2]:.2f}] km")
-                print(f"    Error: {r_error:.3f} km")
-                print(f"    Velocity: [{v_kms[0]:.3f}, {v_kms[1]:.3f}, {v_kms[2]:.3f}] km/s")
-                print(f"    Expected: [{expected_v[0]:.3f}, {expected_v[1]:.3f}, {expected_v[2]:.3f}] km/s")
-                print(f"    Error: {v_error:.6f} km/s")
+                logger.info(f"At tsince = 0:")
+                logger.info(f"  Position: [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] km")
+                logger.info(f"  Expected: [{expected_r[0]:.2f}, {expected_r[1]:.2f}, {expected_r[2]:.2f}] km")
+                logger.info(f"  Error: {r_error:.3f} km")
+                logger.info(f"  Velocity: [{v_kms[0]:.3f}, {v_kms[1]:.3f}, {v_kms[2]:.3f}] km/s")
+                logger.info(f"  Expected: [{expected_v[0]:.3f}, {expected_v[1]:.3f}, {expected_v[2]:.3f}] km/s")
+                logger.info(f"  Error: {v_error:.6f} km/s")
                 
-                test1_pass = r_error < 1.0  # 1km tolerance for now
-                print(f"    Result: {'✅ PASSED' if test1_pass else '❌ FAILED'} (target: <1 km)")
-                
+                test1_pass = r_error < 1.0  # 1km tolerance
                 if test1_pass:
-                    print("\n🚀 Reference SGP4 Implementation Working!")
-                    print("✅ TLE parsing with correct field positions")
-                    print("✅ Newton-Raphson Kepler solver with 1e-12 tolerance")
-                    print("✅ Full LPP/SPP terms implemented")
-                    print("✅ User's exact algorithm specifications")
-                    print("✅ Ready for torch.autograd wrapper")
-                    print("✅ Zero dependencies beyond math module")
+                    logger.info("Test PASSED (target: <1 km)")
+                    logger.info("Reference SGP4 implementation validated successfully")
                 else:
-                    print(f"\n📊 Performance Analysis:")
-                    print(f"    Position accuracy: {r_error:.3f} km")
-                    print(f"    Velocity accuracy: {v_error:.6f} km/s")
-                    print(f"    Algorithm correctly implemented, may need fine-tuning")
+                    logger.warning("Test FAILED (target: <1 km)")
+                    logger.info(f"Position accuracy: {r_error:.3f} km")
+                    logger.info(f"Velocity accuracy: {v_error:.6f} km/s")
                 
                 return prop, test1_pass
         else:
-            print(f"❌ Initialization error: {prop.error}")
+            logger.error(f"Initialization error: {prop.error}")
             return None, False
         
     except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Validation error: {e}", exc_info=True)
         return None, False
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     validate_reference_sgp4()

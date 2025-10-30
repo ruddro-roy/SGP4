@@ -1,0 +1,11 @@
+# Core SGP4 orbital mechanics library
+sgp4>=2.23
+
+# Scientific computing
+numpy>=1.26.2
+
+# Visualization
+matplotlib>=3.8.2
+
+# Automatic differentiation (optional)
+torch>=2.2.0

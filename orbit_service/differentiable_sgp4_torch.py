@@ -129,9 +129,22 @@ def create_differentiable_sgp4(line1, line2):
     return DifferentiableSGP4(line1, line2)
 
 def validate_differentiable_sgp4():
-    """Validate differentiable SGP4 against test cases"""
-    print("🚀 Differentiable SGP4 Validation")
-    print("=" * 50)
+    """
+    Validate differentiable SGP4 implementation.
+    
+    Returns
+    -------
+    tuple
+        (propagator, test_passed) where test_passed is True if validation succeeded
+    
+    Notes
+    -----
+    Tests gradient computation, batch processing, and ML correction framework.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Differentiable SGP4 Validation")
     
     # Test satellite
     line1 = "1 88888U 80275.98708465  .00073094  13844-3  66816-4 0    8"
@@ -141,25 +154,25 @@ def validate_differentiable_sgp4():
         # Create differentiable propagator
         dsgp4 = create_differentiable_sgp4(line1, line2)
         
-        print(f"\n📡 Satellite {dsgp4.satellite.satnum}")
-        print(f"   Epoch: {dsgp4.satellite.epochyr}.{dsgp4.satellite.epochdays:.8f}")
-        print(f"   Inclination: {np.degrees(dsgp4.satellite.inclo):.4f}°")
-        print(f"   Eccentricity: {dsgp4.satellite.ecco:.6f}")
+        logger.info(f"Satellite {dsgp4.satellite.satnum}")
+        logger.info(f"  Epoch: {dsgp4.satellite.epochyr}.{dsgp4.satellite.epochdays:.8f}")
+        logger.info(f"  Inclination: {np.degrees(dsgp4.satellite.inclo):.4f} degrees")
+        logger.info(f"  Eccentricity: {dsgp4.satellite.ecco:.6f}")
         
         # Test at different time points
         test_times = torch.tensor([0.0, 360.0, 720.0, 1440.0])  # minutes
         
-        print(f"\n⏰ Propagation Tests:")
+        logger.info("Propagation Tests:")
         for i, tsince in enumerate(test_times):
             r, v = dsgp4(tsince)
             
-            print(f"   t = {tsince:.0f} min:")
-            print(f"     Position: [{r[0]:.5f}, {r[1]:.5f}, {r[2]:.5f}] km")
-            print(f"     Velocity: [{v[0]:.5f}, {v[1]:.5f}, {v[2]:.5f}] km/s")
-            print(f"     Altitude: {torch.norm(r).item() - 6378.137:.2f} km")
+            logger.info(f"  t = {tsince:.0f} min:")
+            logger.debug(f"    Position: [{r[0]:.5f}, {r[1]:.5f}, {r[2]:.5f}] km")
+            logger.debug(f"    Velocity: [{v[0]:.5f}, {v[1]:.5f}, {v[2]:.5f}] km/s")
+            logger.debug(f"    Altitude: {torch.norm(r).item() - 6378.137:.2f} km")
         
         # Test gradient computation
-        print(f"\n🔬 Gradient Computation Test:")
+        logger.info("Gradient Computation Test:")
         tsince = torch.tensor(360.0, requires_grad=True)
         r, v = dsgp4(tsince)
         
@@ -167,22 +180,22 @@ def validate_differentiable_sgp4():
         loss = torch.norm(r)
         loss.backward()
         
-        print(f"   Loss (orbital radius): {loss.item():.3f} km")
-        print(f"   Gradient w.r.t. time: {tsince.grad.item():.6f}")
-        print(f"   ✅ Gradients computed successfully!")
+        logger.info(f"  Loss (orbital radius): {loss.item():.3f} km")
+        logger.info(f"  Gradient w.r.t. time: {tsince.grad.item():.6f}")
+        logger.info("  Gradients computed successfully")
         
         # Test batch propagation
-        print(f"\n📊 Batch Propagation Test:")
+        logger.info("Batch Propagation Test:")
         batch_times = torch.tensor([0.0, 180.0, 360.0, 540.0, 720.0])
         r_batch, v_batch = dsgp4.propagate_batch(batch_times)
         
-        print(f"   Batch size: {len(batch_times)}")
-        print(f"   Position shape: {r_batch.shape}")
-        print(f"   Velocity shape: {v_batch.shape}")
-        print(f"   ✅ Batch propagation working!")
+        logger.info(f"  Batch size: {len(batch_times)}")
+        logger.info(f"  Position shape: {r_batch.shape}")
+        logger.info(f"  Velocity shape: {v_batch.shape}")
+        logger.info("  Batch propagation working")
         
         # Test ML corrections (training mode)
-        print(f"\n🤖 ML Correction Test:")
+        logger.info("ML Correction Test:")
         dsgp4.train()  # Enable training mode
         
         tsince = torch.tensor(360.0)
@@ -192,24 +205,19 @@ def validate_differentiable_sgp4():
         r_baseline, v_baseline = dsgp4(tsince)
         
         correction_magnitude = torch.norm(r_corrected - r_baseline).item()
-        print(f"   Correction magnitude: {correction_magnitude:.6f} km")
-        print(f"   ✅ ML corrections applied!")
+        logger.info(f"  Correction magnitude: {correction_magnitude:.6f} km")
+        logger.info("  ML corrections applied")
         
-        print(f"\n🎯 Overall Result: ✅ SUCCESS")
-        print("🚀 Differentiable SGP4 Implementation Complete!")
-        print("✅ PyTorch autograd integration working")
-        print("✅ Proven sgp4 library accuracy maintained")
-        print("✅ ML correction framework ready")
-        print("✅ Batch processing supported")
-        print("✅ Gradient computation verified")
+        logger.info("Overall Result: SUCCESS")
+        logger.info("Differentiable SGP4 implementation validated successfully")
         
         return dsgp4, True
         
     except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Validation error: {e}", exc_info=True)
         return None, False
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     validate_differentiable_sgp4()

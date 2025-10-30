@@ -30,6 +30,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
 
 # Environment
 .env
@@ -44,3 +45,12 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Generated plots and outputs
+*.png
+*.pdf
+*.svg
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+*.ipynb

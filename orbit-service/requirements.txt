@@ -1,9 +1,0 @@
-# Core orbital mechanics
-sgp4==2.23
-
-# Scientific computing
-numpy==1.26.2
-matplotlib==3.8.2
-
-# Differentiable computing
-torch>=2.2.0
