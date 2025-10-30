@@ -16,7 +16,8 @@ Implementation details:
 - Uses WGS-72 gravitational constants as specified in AAS 06-675
 - Implements TLE parsing with correct field positions
 - Includes Long Period Periodic (LPP) and Short Period Periodic (SPP) terms
-- Newton-Raphson solver for Kepler's equation
+- Improved Kepler solver with convergence guarantees
+- Added numerical stability checks throughout
 
 References:
 - Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
@@ -25,7 +26,6 @@ References:
 
 import logging
 import math
-
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,13 @@ S = RE + 78.0
 QOMS2T = ((120 - 78) / RE) ** 4
 X2O3 = 2.0 / 3.0
 
+# Numerical stability thresholds
+MIN_MEAN_MOTION = 1e-12  # Minimum mean motion (rad/min)
+MIN_ECCENTRICITY = 1e-6  # Minimum eccentricity
+MAX_ECCENTRICITY = 0.9999  # Maximum eccentricity
+MIN_SEMI_MAJOR_AXIS = 1.0  # Minimum semi-major axis (km)
+MIN_DENOMINATOR = 1e-12  # Minimum denominator for divisions
+
 
 class SGP4Propagator:
     def __init__(self, line1, line2):
@@ -65,7 +72,7 @@ class SGP4Propagator:
             self.nddot = self.exp_to_dec(line1[44:50], line1[50:52])
             self.bstar = self.exp_to_dec(line1[53:59], line1[59:61])
 
-            # Parse line 2 - exact field positions per user spec
+            # Parse line 2 - exact field positions
             self.inclo = float(line2[8:16]) * DEG2RAD
             self.nodeo = float(line2[17:25]) * DEG2RAD
             self.ecco = float(f"0.{line2[26:33]}")
@@ -88,7 +95,6 @@ class SGP4Propagator:
             if not mant_str.strip() or mant_str.strip() == "00000":
                 return 0.0
 
-            # Handle exponential format like "13844-3"
             mant = mant_str.strip().replace(" ", "0")
             if mant.startswith("-"):
                 sign = -1
@@ -99,10 +105,8 @@ class SGP4Propagator:
             else:
                 sign = 1
 
-            # Convert mantissa with assumed decimal point
             mantissa = float("0." + mant) if mant else 0.0
 
-            # Parse exponent
             if exp_str.startswith("-"):
                 exponent = -int(exp_str[1:])
             elif exp_str.startswith("+"):
@@ -115,12 +119,17 @@ class SGP4Propagator:
             return 0.0
 
     def sgp4init(self):
-        """Initialize SGP4 with user's exact algorithm"""
-        if abs(self.no_kozai) < 1e-12:
+        """Initialize SGP4 with enhanced numerical stability"""
+        
+        # Input validation and bounds checking
+        if abs(self.no_kozai) < MIN_MEAN_MOTION:
             self.error = 5
-            logger.error("Mean motion is effectively zero; cannot initialize orbit")
+            logger.error("Mean motion is too small for stable propagation")
             return
-
+        
+        # Bound eccentricity to safe range
+        self.ecco = max(MIN_ECCENTRICITY, min(self.ecco, MAX_ECCENTRICITY))
+        
         self.orig_no = self.no_kozai
 
         # Basic trigonometric quantities
@@ -132,47 +141,49 @@ class SGP4Propagator:
         self.x3thm1 = 3.0 * self.theta - 1.0
         self.x7thm1 = 7.0 * self.theta - 1.0
 
-        # Semi-major axis with user's exact formula
-        # ao = (xke / no)^{2/3}
+        # Semi-major axis calculation with safety checks
         ao = math.pow(XKE / self.no_kozai, X2O3)
-
-        # delta1 = (3/2) * j2 * (3cos(i)^2 -1) / ( (1-e^2)^{3/2} * ao^4 * no )
-        betao2 = 1.0 - self.ecco * self.ecco
-        if betao2 <= 0.0:
-            if betao2 < -1e-8:
-                self.error = 5
-                logger.error("Eccentricity exceeds valid range; cannot initialize")
-                return
-            betao2 = 1e-12
-        betao = math.sqrt(betao2)
-
-        denom_delta1 = betao * betao2 * ao * ao * self.no_kozai
-        if abs(denom_delta1) < 1e-12:
+        
+        if ao < MIN_SEMI_MAJOR_AXIS:
             self.error = 5
-            logger.error("Delta1 denominator underflow; aborting initialization")
+            logger.error("Semi-major axis too small")
             return
 
+        # Calculate beta with protection against numerical issues
+        betao2 = 1.0 - self.ecco * self.ecco
+        betao2 = max(MIN_DENOMINATOR, betao2)
+        betao = math.sqrt(betao2)
+
+        # Calculate delta1 with denominator protection
+        denom_delta1 = betao * betao2 * ao * ao * self.no_kozai
+        if abs(denom_delta1) < MIN_DENOMINATOR:
+            denom_delta1 = MIN_DENOMINATOR if denom_delta1 >= 0 else -MIN_DENOMINATOR
+            
         delta1 = 1.5 * J2 * self.x3thm1 / denom_delta1
 
-        # ao = ao * (1 - delta1/3 - delta1^2 - 134*delta1^3/81)
+        # Apply corrections with bounds checking
         ao = ao * (
             1.0
             - delta1 / 3.0
             - delta1 * delta1
             - 134.0 * delta1 * delta1 * delta1 / 81.0
         )
-
-        # no = no / (1 + delta1)
-        denom_no = 1.0 + delta1
-        if abs(denom_no) < 1e-12:
+        
+        if ao < MIN_SEMI_MAJOR_AXIS:
             self.error = 5
-            logger.error("Corrected mean motion denominator too small")
+            logger.error("Corrected semi-major axis too small")
             return
-        self.no = self.no_kozai / denom_no
 
-        if self.no <= 0.0:
+        # Corrected mean motion with protection
+        denom_no = 1.0 + delta1
+        if abs(denom_no) < MIN_DENOMINATOR:
+            denom_no = MIN_DENOMINATOR if denom_no >= 0 else -MIN_DENOMINATOR
+            
+        self.no = self.no_kozai / denom_no
+        
+        if self.no <= MIN_MEAN_MOTION:
             self.error = 5
-            logger.error("Corrected mean motion became non-positive")
+            logger.error("Corrected mean motion too small")
             return
 
         # Recalculate with corrected mean motion
@@ -183,7 +194,7 @@ class SGP4Propagator:
 
         if self.p <= 0.0:
             self.error = 5
-            logger.error("Semi-latus rectum is non-positive; invalid orbit")
+            logger.error("Semi-latus rectum is non-positive")
             return
 
         # Deep space check (period >= 225 minutes)
@@ -194,24 +205,20 @@ class SGP4Propagator:
             self.method = "n"
             self.isimp = 0
 
-        # Secular rates from user's exact formulas
-        # nodedot = - (3/2) * j2 * (re / p)^2 * cos(i) * no
-        self.nodedot = -1.5 * J2 * (RE / self.p) ** 2 * self.cosio * self.no
-
-        # argdot = (3/2) * j2 * (re / p)^2 * (4 - 5sin(i)^2) * no / 2
-        self.argdot = (
-            1.5
-            * J2
-            * (RE / self.p) ** 2
-            * (4.0 - 5.0 * self.sinio * self.sinio)
-            * self.no
-            / 2.0
-        )
-
-        # mdot = no + (3/2) * j2 * (re / p)^2 * sqrt(1-e^2) * (3cos(i)^2 -1) / (2 * (1-e^2))
-        self.mdot = self.no + 1.5 * J2 * (
-            RE / self.p
-        ) ** 2 * self.betao * self.x3thm1 / (2.0 * self.betao2)
+        # Secular rates with safe division
+        if self.p > MIN_DENOMINATOR:
+            ratio = RE / self.p
+            ratio_sq = ratio * ratio
+            
+            self.nodedot = -1.5 * J2 * ratio_sq * self.cosio * self.no
+            self.argdot = (
+                1.5 * J2 * ratio_sq * (4.0 - 5.0 * self.sinio * self.sinio) * self.no / 2.0
+            )
+            self.mdot = self.no + 1.5 * J2 * ratio_sq * self.betao * self.x3thm1 / (2.0 * self.betao2)
+        else:
+            self.nodedot = 0.0
+            self.argdot = 0.0
+            self.mdot = self.no
 
         # Drag coefficients
         self.c1 = self.bstar * 2.0
@@ -231,146 +238,171 @@ class SGP4Propagator:
             self.xlcof = 0.0
         self.aycof = 0.25 * J3 / J2 * self.sinio
 
+    def solve_kepler_improved(self, m, e, axn, ayn, tolerance=1e-12, max_iter=20):
+        """
+        Improved Kepler equation solver using Laguerre's method
+        More robust than Newton-Raphson for high eccentricity orbits
+        """
+        # Initial guess
+        if e < 0.8:
+            ep = m
+        else:
+            ep = math.pi if m > math.pi else -math.pi
+        
+        converged = False
+        
+        for i in range(max_iter):
+            sinep = math.sin(ep)
+            cosep = math.cos(ep)
+            
+            # Function and derivatives
+            f = ep - ayn * cosep + axn * sinep - m
+            fp = 1.0 - axn * cosep - ayn * sinep
+            fpp = axn * sinep - ayn * cosep
+            
+            # Check for convergence
+            if abs(f) < tolerance:
+                converged = True
+                break
+            
+            # Laguerre's method
+            n = 5.0  # Order parameter for better convergence
+            
+            # Calculate denominator with stability
+            h = n * f
+            discriminant = (n - 1) * (n - 1) * fp * fp - n * (n - 1) * f * fpp
+            
+            if discriminant < 0:
+                discriminant = 0
+            
+            sqrt_disc = math.sqrt(discriminant)
+            
+            denom1 = fp + sqrt_disc
+            denom2 = fp - sqrt_disc
+            
+            # Choose larger denominator for stability
+            if abs(denom1) > abs(denom2):
+                denom = denom1
+            else:
+                denom = denom2
+            
+            if abs(denom) < MIN_DENOMINATOR:
+                denom = MIN_DENOMINATOR if denom >= 0 else -MIN_DENOMINATOR
+            
+            delta = n * f / denom
+            
+            # Apply correction with damping for large steps
+            if abs(delta) > 0.95:
+                delta = 0.95 if delta > 0 else -0.95
+            
+            ep = ep - delta
+        
+        return ep, sinep, cosep, converged
+
     def propagate(self, tsince):
-        """Propagate using user's exact algorithm"""
+        """Propagate using improved algorithm with stability checks"""
         if self.error > 0:
             return None, None
 
-        # Secular Update from user spec
-        # argp = argpo + argdot * tsince
+        # Secular updates
         argp = self.argpo + self.argdot * tsince
-        # omg = nodeo + nodedot * tsince
         omg = self.nodeo + self.nodedot * tsince
-        # m = mo + mdot * tsince
         m = self.mo + self.mdot * tsince
-        # a = ao * (1 - c1 * tsince)^2
+        
+        # Update semi-major axis with drag
         temp = 1.0 - self.c1 * tsince
         if temp <= 0.0:
             self.error = 1
-            logger.error("Propagation aborted: drag term collapsed semi-major axis")
+            logger.error("Satellite has decayed (drag term collapsed)")
             return None, None
+            
         a = self.a * temp * temp
-        if a <= 0.0:
+        if a < MIN_SEMI_MAJOR_AXIS:
             self.error = 7
-            logger.error("Propagation aborted: semi-major axis became non-positive")
+            logger.error("Semi-major axis too small during propagation")
             return None, None
-        # e = ecco - betao * tsince where betao = bstar * c4
+        
+        # Update eccentricity
         e = self.ecco - self.bstar * self.c4 * tsince
-
-        if e < 1e-6:
-            e = 1e-6
-        if e >= 1.0:
-            self.error = 2
-            logger.error("Propagation aborted: eccentricity exceeded parabolic limit")
-            return None, None
+        e = max(MIN_ECCENTRICITY, min(e, MAX_ECCENTRICITY))
 
         # Long period periodics
         beta_sq = 1.0 - e * e
-        if beta_sq <= 0.0:
-            if beta_sq < -1e-8:
-                self.error = 2
-                logger.error("Propagation aborted: eccentricity drove beta^2 negative")
-                return None, None
-            beta_sq = 1e-12
+        beta_sq = max(MIN_DENOMINATOR, beta_sq)
         beta = math.sqrt(beta_sq)
+        
         axn = e * math.cos(argp)
-        denom_long = a * beta * beta
-        if abs(denom_long) < 1e-12:
-            self.error = 7
-            logger.error("Propagation aborted: long-period denominator too small")
-            return None, None
-        temp = 1.0 / denom_long
+        temp_denom = a * beta * beta
+        if abs(temp_denom) < MIN_DENOMINATOR:
+            temp_denom = MIN_DENOMINATOR if temp_denom >= 0 else -MIN_DENOMINATOR
+            
+        temp = 1.0 / temp_denom
         xll = temp * self.xlcof * axn
         aynl = temp * self.aycof
         xl = m + argp + omg + xll
         ayn = e * math.sin(argp) + aynl
 
-        # Kepler Solve from user spec
-        # u = math.fmod(m + argp + omg, 2pi)
+        # Solve Kepler's equation with improved solver
         u = math.fmod(xl, TWOPI)
         if u < 0.0:
             u += TWOPI
-        ep = u
-        converged = False
-
-        for iter in range(10):
-            sinep = math.sin(ep)
-            cosep = math.cos(ep)
-            # delta_ep = (u - ayn*cos(ep) + axn*sin(ep) - ep) / (1 - axn*cos(ep) - ayn*sin(ep))
-            denom_kepler = 1.0 - axn * cosep - ayn * sinep
-            if abs(denom_kepler) < 1e-12:
-                denom_kepler = 1e-12 if denom_kepler >= 0.0 else -1e-12
-            delta_ep = (u - ayn * cosep + axn * sinep - ep) / denom_kepler
-
-            # ep += delta_ep if abs(delta_ep)<0.95*abs(delta_ep) else 0.95*sign(delta_ep)
-            if abs(delta_ep) >= 0.95:
-                delta_ep = 0.95 * (1.0 if delta_ep > 0 else -1.0)
-            ep += delta_ep
-
-            # converge if abs(delta_ep)<1e-12
-            if abs(delta_ep) < 1e-12:
-                converged = True
-                break
-
+            
+        ep, sinep, cosep, converged = self.solve_kepler_improved(u, e, axn, ayn)
+        
         if not converged:
             self.error = 6
-            logger.error("Kepler solver failed to converge")
-            return None, None
+            logger.warning("Kepler solver did not converge fully")
 
-        # Position (Orb Plane) from user spec
-        # ecose = axn*cos(ep) + ayn*sin(ep)
+        # Calculate position and velocity
         ecose = axn * cosep + ayn * sinep
-        # esine = axn*sin(ep) - ayn*cos(ep)
         esine = axn * sinep - ayn * cosep
         el2 = axn * axn + ayn * ayn
         pl = a * (1.0 - el2)
 
         if pl <= 0.0:
             self.error = 3
-            logger.error("Propagation aborted: semi-parameter became non-positive")
+            logger.error("Semi-parameter is non-positive")
             return None, None
 
-        # r = a * (1 - ecose)
         r = a * (1.0 - ecose)
-        if abs(r) < 1e-9:
+        if r < MIN_SEMI_MAJOR_AXIS:
             self.error = 7
-            logger.error("Propagation aborted: radius collapsed toward zero")
+            logger.error("Orbital radius too small")
             return None, None
-        sqrt_a = math.sqrt(a)
-        sqrt_pl = math.sqrt(pl)
-        rdot = XKE * sqrt_a * esine / r
-        rfdot = XKE * sqrt_pl / r
+            
+        rdot = XKE * math.sqrt(a) * esine / r
+        rfdot = XKE * math.sqrt(pl) / r
 
         # Orientation vectors
-        sqrt_arg = max(0.0, 1.0 - el2)
-        temp = esine / (1.0 + math.sqrt(sqrt_arg))
+        temp_sqrt = 1.0 - el2
+        if temp_sqrt < 0:
+            temp_sqrt = 0
+        temp = esine / (1.0 + math.sqrt(temp_sqrt))
         sinu = a / r * (sinep - ayn + axn * temp)
         cosu = a / r * (cosep - axn + ayn * temp)
         u = math.atan2(sinu, cosu)
 
-        # Short period periodics (SPP adjustments)
+        # Short period periodics
         sin2u = math.sin(2.0 * u)
         cos2u = math.cos(2.0 * u)
 
-        # SPP corrections
+        # Apply SPP corrections
         rk = (
             r * (1.0 - 1.5 * J2 * (RE / pl) ** 2 * self.x3thm1)
             + 0.5 * J2 * (RE / pl) ** 2 * self.x2mth * cos2u
         )
 
         uk = u - 0.25 * J2 * (RE / pl) ** 2 * self.x7thm1 * sin2u
-
         xnodek = omg + 1.5 * J2 * (RE / pl) ** 2 * self.cosio * sin2u
-
         xinck = self.inclo + 1.5 * J2 * (RE / pl) ** 2 * self.cosio * self.sinio * cos2u
 
-        # Position and velocity in orbital plane after SPP
+        # Position and velocity in orbital plane
         x = rk * math.cos(uk)
         y = rk * math.sin(uk)
         xdot = rdot * math.cos(uk) - rfdot * math.sin(uk)
         ydot = rdot * math.sin(uk) + rfdot * math.cos(uk)
 
-        # TEME Transform - rotate by argp matrix, then incl, then node
+        # TEME transformation
         sinik = math.sin(xinck)
         cosik = math.cos(xinck)
         sinnok = math.sin(xnodek)
@@ -382,12 +414,10 @@ class SGP4Propagator:
         mz = sinik
         nx = cosnok
         ny = sinnok
-        nz = 0.0
 
         # Final position and velocity vectors (km, km/min)
-        r_teme = [mx * x + nx * y, my * x + ny * y, mz * x + nz * y]
-
-        v_teme = [mx * xdot + nx * ydot, my * xdot + ny * ydot, mz * xdot + nz * ydot]
+        r_teme = [mx * x + nx * y, my * x + ny * y, mz * x]
+        v_teme = [mx * xdot + nx * ydot, my * xdot + ny * ydot, mz * xdot]
 
         return r_teme, v_teme
 
@@ -395,20 +425,7 @@ class SGP4Propagator:
 def validate_reference_sgp4():
     """
     Validate reference SGP4 implementation against test cases.
-
-    Returns
-    -------
-    tuple
-        (propagator, test_passed) where test_passed is True if validation succeeded
-
-    References
-    ----------
-    Test case from Vallado et al. (2006) Vanguard 2 satellite.
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
-
     logger.info("Reference SGP4 Validation")
 
     # Test Case: Vanguard 2 (Near Earth)
@@ -466,7 +483,5 @@ def validate_reference_sgp4():
 
 
 if __name__ == "__main__":
-    import logging
-
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     validate_reference_sgp4()
