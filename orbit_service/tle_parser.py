@@ -27,8 +27,7 @@ import math
 import numpy as np
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Tuple
-from sgp4.api import WGS84, jday
-from sgp4.io import twoline2rv
+from sgp4.api import Satrec, jday
 
 # WGS-72 gravitational constants for SGP4 (per Vallado et al. 2006, AAS 06-675)
 EARTH_RADIUS_KM = 6378.135  # Earth equatorial radius in km (WGS-72)
@@ -326,11 +325,11 @@ class TLEParser:
         line1, line2 = self.tle_data_to_lines(tle_data)
 
         try:
-            satellite = twoline2rv(line1, line2, WGS84)
+            satellite = Satrec.twoline2rv(line1, line2)
         except Exception as e:
             # Fallback: use original lines if reconstruction fails
             if "line1" in tle_data and "line2" in tle_data:
-                satellite = twoline2rv(tle_data["line1"], tle_data["line2"], WGS84)
+                satellite = Satrec.twoline2rv(tle_data["line1"], tle_data["line2"])
             else:
                 raise RuntimeError(f"TLE reconstruction failed: {e}")
 

@@ -27,8 +27,7 @@ from datetime import timedelta
 from typing import Dict, Any, List, Tuple
 
 from orbit_service.tle_parser import TLEParser
-from sgp4.io import twoline2rv
-from sgp4.api import WGS84
+from sgp4.api import Satrec
 from logging_config import get_logger, configure_logging
 import logging
 
@@ -162,7 +161,7 @@ def analyze_bstar_sensitivity(
         logger.debug(f"Testing B* {variation:+d}%: {modified_bstar:.8e}")
 
         line1, line2 = parser.tle_data_to_lines(modified_tle_data)
-        satellite = twoline2rv(line1, line2, WGS84)
+        satellite = Satrec.twoline2rv(line1, line2)
 
         positions = []
         altitudes = []
