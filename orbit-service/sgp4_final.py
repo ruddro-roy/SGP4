@@ -6,11 +6,11 @@ Ready for differentiable ML enhancement
 
 import math
 
-# WGS-72 Constants from AAS 06-675
+# WGS-72 constants (per Vallado et al. 2006, AAS 06-675)
 MU = 398600.8  # km^3/s^2
 R_E = 6378.135  # km
-J2 = 0.001082616
-J3 = -0.00000253881
+J2 = 0.00108262998905892
+J3 = -0.00000253215306
 J4 = -0.00000165597
 XKE = 60.0 / math.sqrt(R_E**3 / MU)
 TUMIN = 1.0 / XKE
