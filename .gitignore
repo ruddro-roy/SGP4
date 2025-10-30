@@ -1,92 +1,46 @@
-# === Environment & Configuration ===
-.env
-.env.*
-!.env.example
-*.local
-
-# === Dependencies ===
-node_modules/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-pip-log.txt
-pip-delete-this-directory.txt
-
-# === Build & Distribution ===
 build/
 dist/
 *.egg-info/
 .eggs/
-target/
+pip-log.txt
 
-# === IDE & Editor ===
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
 Thumbs.db
 
-# === Logs ===
-*.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# === Testing ===
-coverage/
-.nyc_output/
+# Testing
+.pytest_cache/
 .coverage
 htmlcov/
-.pytest_cache/
-.cache/
 
-# === Security & Secrets ===
-*.key
-*.pem
-*.p12
-*.pfx
-secrets/
-credentials/
-auth/
-tokens/
+# Environment
+.env
+.env.*
+!.env.example
 
-# === Database ===
-*.db
-*.sqlite
-*.sqlite3
+# Logs
+*.log
+logs/
 
-# === Temporary Files ===
+# Temporary
 tmp/
 temp/
-.tmp/
 *.tmp
-*.temp
-
-# === OS Generated ===
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# === Docker ===
-.dockerignore
-
-# === Kubernetes ===
-*.kubeconfig
-kubeconfig*
-
-# === Cloud Provider Configs ===
-.aws/
-.gcp/
-.azure/
-
-# === Monitoring & Analytics ===
-.sentry-*
