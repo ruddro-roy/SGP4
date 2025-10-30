@@ -1,11 +1,26 @@
 """
 Reference SGP4 Implementation
-Based on user's exact specifications from AAS 06-675 paper
-- Correct TLE parsing with fixed field positions
-- Proper constants and unit conversions
-- Newton-Raphson Kepler solver with 1e-12 tolerance
-- Full LPP/SPP terms implementation
-- Ready for torch.autograd wrapper
+
+This is an educational reference implementation of SGP4 based on the algorithm
+described in Vallado et al. (2006) "Revisiting Spacetrack Report #3" (AAS 06-675).
+
+Purpose:
+- Educational reference for understanding SGP4 internals
+- Algorithm validation and comparison
+- Not intended for production use
+
+For production applications, use the proven sgp4 library or the
+differentiable_sgp4_torch wrapper instead.
+
+Implementation details:
+- Uses WGS-72 gravitational constants as specified in AAS 06-675
+- Implements TLE parsing with correct field positions
+- Includes Long Period Periodic (LPP) and Short Period Periodic (SPP) terms
+- Newton-Raphson solver for Kepler's equation
+
+References:
+- Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
+- Hoots, F. R., & Roehrich, R. L. (1980). "Spacetrack Report No. 3"
 """
 
 import math

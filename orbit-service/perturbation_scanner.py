@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 """
-Perturbation Scanner for Orbital Anomaly Detection
-Detects deviations between predicted and observed satellite positions
+Orbital Perturbation Analysis
+
+Analyzes and detects deviations between predicted and observed satellite positions.
+These deviations can indicate:
+- TLE data staleness
+- Unmodeled perturbations (solar radiation pressure, third-body effects)
+- Atmospheric density variations
+- Satellite maneuvers
+
+This module provides tools for:
+- Computing position residuals
+- Classifying perturbation severity
+- Identifying systematic vs. random errors
+- Flagging when TLE updates are needed
+
+Educational purpose: Understanding the limitations of analytical propagation models
+and the importance of regular TLE updates for maintaining accuracy.
 """
 
 import numpy as np
