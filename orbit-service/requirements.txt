@@ -6,4 +6,4 @@ numpy==1.26.2
 matplotlib==3.8.2
 
 # Differentiable computing
-torch==2.1.0
+torch>=2.2.0

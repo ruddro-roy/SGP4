@@ -25,20 +25,6 @@ class DifferentiableSGP4(nn.Module):
         
         # Load satellite using proven sgp4 library
         self.satellite = Satrec.twoline2rv(line1, line2)
-        
-        # Print key initial values for debugging
-        print("--- Wrapper _sgp4init ---")
-        print(f"n: {self.satellite.no_kozai:.8f}")
-        print(f"ecco: {self.satellite.ecco:.8f}")
-        print(f"inclo: {self.satellite.inclo:.8f}")
-        print(f"nodeo: {self.satellite.nodeo:.8f}")
-        print(f"argpo: {self.satellite.argpo:.8f}")
-        print(f"mo: {self.satellite.mo:.8f}")
-        print(f"mdot: {self.satellite.mdot:.8f}")
-        print(f"argpdot: {self.satellite.argpdot:.8f}")
-        print(f"nodedot: {self.satellite.nodedot:.8f}")
-        print(f"a: {self.satellite.a:.8f}")
-        print("--------------------------")
 
         # Extract orbital elements as learnable parameters
         self.bstar_correction = nn.Parameter(torch.tensor(0.0))
@@ -83,13 +69,6 @@ class DifferentiableSGP4(nn.Module):
         # Convert to tensors
         r_tensor = torch.tensor(r_km, dtype=torch.float32, device=tsince_minutes.device)
         v_tensor = torch.tensor(v_km_s, dtype=torch.float32, device=tsince_minutes.device)
-        
-        # Debug prints for wrapper propagation
-        if tsince_minutes.item() == 1.0:
-            print("--- Wrapper _sgp4_internal (tsince=1.0) ---")
-            print(f"pos_eci: {r_tensor[0]:.4f}, {r_tensor[1]:.4f}, {r_tensor[2]:.4f}")
-            print(f"vel_eci: {v_tensor[0]:.4f}, {v_tensor[1]:.4f}, {v_tensor[2]:.4f}")
-            print("-------------------------------------------")
 
         # Apply ML corrections if enabled
         if self.training:

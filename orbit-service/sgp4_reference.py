@@ -15,13 +15,13 @@ RAD2DEG = 180.0 / math.pi
 TWOPI = 2 * math.pi
 XPDOTP = 1440.0 / TWOPI  # rev/day to rad/min
 
-# Constants from AAS 06-675 (WGS-72)
-MU = 398600.8
-RE = 6378.135
+# WGS-72 constants (per Vallado et al. 2006, AAS 06-675)
+MU = 398600.8  # km^3/s^2
+RE = 6378.135  # km
 XKE = 60.0 / math.sqrt(RE**3 / MU)
 TUMIN = 1.0 / XKE
-J2 = 0.001082616
-J3 = -0.00000253881
+J2 = 0.00108262998905892
+J3 = -0.00000253215306
 J4 = -0.00000165597
 S = RE + 78.0
 QOMS2T = ((120 - 78) / RE)**4

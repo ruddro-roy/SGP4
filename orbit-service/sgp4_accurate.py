@@ -12,12 +12,13 @@ class AccurateSGP4:
     """Accurate SGP4 implementation following standard algorithms"""
     
     def __init__(self):
-        # WGS-84 constants
-        self.mu = 398600.5  # km³/s² (WGS-84)
-        self.Re = 6378.137  # km (WGS-84)
-        self.J2 = 0.00108262998905  # WGS-84
+        # WGS-72 constants (per Vallado et al. 2006, AAS 06-675)
+        # SGP4 uses WGS-72, not WGS-84
+        self.mu = 398600.8  # km³/s²
+        self.Re = 6378.135  # km
+        self.J2 = 0.00108262998905892
         self.J3 = -0.00000253215306
-        self.J4 = -0.00000161098761
+        self.J4 = -0.00000165597
         
         # Time constants
         self.minutes_per_day = 1440.0
