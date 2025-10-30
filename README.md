@@ -1,6 +1,6 @@
 # SGP4 Orbital Propagation
 
-Research-grade Python implementation of SGP4 orbital propagation with support for automatic differentiation.
+Python implementation of SGP4 orbital propagation with support for automatic differentiation.
 
 ## Overview
 
