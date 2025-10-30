@@ -169,11 +169,3 @@ Sources for current TLE data:
 ## License
 
 This project is provided for educational and research purposes.
-
-## Contributing
-
-Contributions are welcome. Please ensure:
-- Code follows PEP 8 style guidelines
-- All functions have type hints and docstrings
-- Tests pass before submitting pull requests
-- No emojis or informal comments in code
