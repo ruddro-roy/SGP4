@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 """
-B* Sensitivity Analysis Test
-Demonstrates that B* drag coefficient variations produce different orbital trajectories
+B* Drag Coefficient Sensitivity Analysis
+
+Analyzes how variations in the B* drag term affect satellite orbital predictions.
+The B* parameter (ballistic coefficient) models atmospheric drag and is critical
+for accurate low Earth orbit propagation.
+
+This analysis:
+- Compares orbital trajectories with different B* values
+- Shows position divergence over time
+- Demonstrates the importance of accurate drag modeling
+
+Key insight: Small errors in B* can lead to significant position errors after
+just a few orbits, especially for satellites in dense atmospheric regions.
+
+Technical background:
+B* combines several drag-related parameters: B* = (Cd * A)/(2 * m)
+where Cd is drag coefficient, A is cross-sectional area, m is mass.
 """
 
 import numpy as np

@@ -1,11 +1,26 @@
 """
 Reference SGP4 Implementation
-Based on user's exact specifications from AAS 06-675 paper
-- Correct TLE parsing with fixed field positions
-- Proper constants and unit conversions
-- Newton-Raphson Kepler solver with 1e-12 tolerance
-- Full LPP/SPP terms implementation
-- Ready for torch.autograd wrapper
+
+This is an educational reference implementation of SGP4 based on the algorithm
+described in Vallado et al. (2006) "Revisiting Spacetrack Report #3" (AAS 06-675).
+
+Purpose:
+- Educational reference for understanding SGP4 internals
+- Algorithm validation and comparison
+- Not intended for production use
+
+For production applications, use the proven sgp4 library or the
+differentiable_sgp4_torch wrapper instead.
+
+Implementation details:
+- Uses WGS-72 gravitational constants as specified in AAS 06-675
+- Implements TLE parsing with correct field positions
+- Includes Long Period Periodic (LPP) and Short Period Periodic (SPP) terms
+- Newton-Raphson solver for Kepler's equation
+
+References:
+- Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
+- Hoots, F. R., & Roehrich, R. L. (1980). "Spacetrack Report No. 3"
 """
 
 import math
@@ -15,13 +30,13 @@ RAD2DEG = 180.0 / math.pi
 TWOPI = 2 * math.pi
 XPDOTP = 1440.0 / TWOPI  # rev/day to rad/min
 
-# Constants from AAS 06-675 (WGS-72)
-MU = 398600.8
-RE = 6378.135
+# WGS-72 constants (per Vallado et al. 2006, AAS 06-675)
+MU = 398600.8  # km^3/s^2
+RE = 6378.135  # km
 XKE = 60.0 / math.sqrt(RE**3 / MU)
 TUMIN = 1.0 / XKE
-J2 = 0.001082616
-J3 = -0.00000253881
+J2 = 0.00108262998905892
+J3 = -0.00000253215306
 J4 = -0.00000165597
 S = RE + 78.0
 QOMS2T = ((120 - 78) / RE)**4
