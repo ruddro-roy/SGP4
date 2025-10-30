@@ -9,15 +9,15 @@ Constants:
 
 Fallback TLE Data:
     Hardcoded ISS TLE data for demonstrations and testing when live data is unavailable.
-    
+
     IMPORTANT: Update this TLE data periodically for accuracy.
     - Low Earth Orbit (LEO) satellites: Update weekly
-    - Medium Earth Orbit (MEO): Update monthly  
+    - Medium Earth Orbit (MEO): Update monthly
     - Geostationary (GEO): Update quarterly
-    
+
     Current TLE epoch: 2025-08-18
     Next recommended update: 2025-08-25 or later
-    
+
     Sources for updated TLEs:
     - Space-Track.org (requires free registration)
     - CelesTrak.org (public access)
@@ -40,12 +40,12 @@ J4: float = -0.00000165597  # Fourth zonal harmonic coefficient
 # Last updated: 2025-08-18
 # Update recommended by: 2025-08-25
 FALLBACK_ISS_TLE: Dict[str, Any] = {
-    'name': 'ISS (ZARYA)',
-    'norad_id': 25544,
-    'line1': '1 25544U 98067A   25230.51041667  .00002182  00000-0  13103-3 0  9991',
-    'line2': '2 25544  51.6416  45.1234 0002329  75.6910 284.4861 15.50000000123456',
-    'epoch': '2025-08-18T12:15:00Z',
-    'mean_motion': 15.5,
-    'inclination': 51.6416,
-    'eccentricity': 0.0002329
+    "name": "ISS (ZARYA)",
+    "norad_id": 25544,
+    "line1": "1 25544U 98067A   25230.51041667  .00002182  00000-0  13103-3 0  9991",
+    "line2": "2 25544  51.6416  45.1234 0002329  75.6910 284.4861 15.50000000123456",
+    "epoch": "2025-08-18T12:15:00Z",
+    "mean_motion": 15.5,
+    "inclination": 51.6416,
+    "eccentricity": 0.0002329,
 }
