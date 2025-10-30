@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 """
-B* Sensitivity Analysis - Simple Demonstration
-Shows that the TLE reconstruction now properly handles B* modifications
+B* Drag Coefficient Demonstration
+
+Simple demonstration of TLE parsing and B* drag coefficient extraction.
+Shows how to parse TLE data and access the ballistic coefficient parameter.
+
+This script validates that:
+- TLE parsing correctly extracts B* values
+- B* values match between custom parser and reference sgp4 library
+- Exponential notation in TLE format is handled correctly
+
+The B* drag term is stored in exponential notation in TLE files (e.g., "21844-3"
+represents 2.1844 × 10^-3). Proper parsing of this field is essential for
+accurate drag modeling.
 """
 
 import numpy as np

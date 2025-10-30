@@ -1,8 +1,25 @@
 #!/usr/bin/env python3
 """
-TLE Parser Implementation
-Parses Two-Line Element (TLE) sets according to AAS 06-675 paper specifications
-Includes Long-Period Periodic (LPP) terms for secular effects computation
+TLE (Two-Line Element) Parser Implementation
+
+Parses Two-Line Element sets according to the standard TLE format and provides
+utilities for orbital propagation and coordinate transformations.
+
+TLE Format:
+The TLE format is a standard way to represent satellite orbital elements in two
+69-character lines. This parser extracts orbital parameters and supports:
+- Parsing and validation of TLE fields
+- Exponential notation handling for drag terms
+- Reconstruction of TLE strings with modified parameters
+- Orbital propagation via SGP4
+- Coordinate transformations (TEME to ECEF)
+
+Gravitational Model:
+Uses WGS-72 constants as required by SGP4 (per Vallado et al. 2006, AAS 06-675)
+
+References:
+- Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
+- CelesTrak TLE format documentation: https://celestrak.org/NORAD/documentation/tle-fmt.php
 """
 
 import re
@@ -13,11 +30,11 @@ from typing import Dict, Any, Optional, Tuple
 from sgp4.api import Satrec, WGS72, WGS84, jday
 from sgp4.io import twoline2rv
 
-# Earth gravitational constants for LPP and SPP calculations
-EARTH_RADIUS_KM = 6378.137  # Earth equatorial radius in km
-J2 = 1.08262668e-3  # Earth second zonal harmonic
-J3 = -2.53215306e-6  # Earth third zonal harmonic
-J4 = -1.61098761e-6  # Earth fourth zonal harmonic
+# WGS-72 gravitational constants for SGP4 (per Vallado et al. 2006, AAS 06-675)
+EARTH_RADIUS_KM = 6378.135  # Earth equatorial radius in km (WGS-72)
+J2 = 0.00108262998905892  # Earth second zonal harmonic
+J3 = -0.00000253215306  # Earth third zonal harmonic
+J4 = -0.00000165597  # Earth fourth zonal harmonic
 
 
 class TLEParser:

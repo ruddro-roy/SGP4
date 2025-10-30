@@ -1,6 +1,22 @@
 """
 Differentiable SGP4 Implementation using PyTorch
-Wraps proven sgp4 library with torch.autograd for ML enhancements
+
+This module provides a PyTorch-compatible wrapper around the proven sgp4 library
+(based on Vallado et al. 2006). The wrapper enables automatic differentiation through
+the orbital propagation chain while maintaining the accuracy of the established
+SGP4 implementation.
+
+Architecture:
+- Uses the official sgp4 library (sgp4==2.23) for core propagation
+- Wraps results in PyTorch tensors to enable gradient computation
+- Optional neural network for learned corrections (experimental)
+
+This approach prioritizes correctness by delegating to the proven implementation
+rather than reimplementing the complex SGP4 algorithm from scratch.
+
+References:
+- Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
+- Rhodes, B. sgp4 library: https://pypi.org/project/sgp4/
 """
 
 import torch
@@ -25,20 +41,6 @@ class DifferentiableSGP4(nn.Module):
         
         # Load satellite using proven sgp4 library
         self.satellite = Satrec.twoline2rv(line1, line2)
-        
-        # Print key initial values for debugging
-        print("--- Wrapper _sgp4init ---")
-        print(f"n: {self.satellite.no_kozai:.8f}")
-        print(f"ecco: {self.satellite.ecco:.8f}")
-        print(f"inclo: {self.satellite.inclo:.8f}")
-        print(f"nodeo: {self.satellite.nodeo:.8f}")
-        print(f"argpo: {self.satellite.argpo:.8f}")
-        print(f"mo: {self.satellite.mo:.8f}")
-        print(f"mdot: {self.satellite.mdot:.8f}")
-        print(f"argpdot: {self.satellite.argpdot:.8f}")
-        print(f"nodedot: {self.satellite.nodedot:.8f}")
-        print(f"a: {self.satellite.a:.8f}")
-        print("--------------------------")
 
         # Extract orbital elements as learnable parameters
         self.bstar_correction = nn.Parameter(torch.tensor(0.0))
@@ -83,13 +85,6 @@ class DifferentiableSGP4(nn.Module):
         # Convert to tensors
         r_tensor = torch.tensor(r_km, dtype=torch.float32, device=tsince_minutes.device)
         v_tensor = torch.tensor(v_km_s, dtype=torch.float32, device=tsince_minutes.device)
-        
-        # Debug prints for wrapper propagation
-        if tsince_minutes.item() == 1.0:
-            print("--- Wrapper _sgp4_internal (tsince=1.0) ---")
-            print(f"pos_eci: {r_tensor[0]:.4f}, {r_tensor[1]:.4f}, {r_tensor[2]:.4f}")
-            print(f"vel_eci: {v_tensor[0]:.4f}, {v_tensor[1]:.4f}, {v_tensor[2]:.4f}")
-            print("-------------------------------------------")
 
         # Apply ML corrections if enabled
         if self.training:

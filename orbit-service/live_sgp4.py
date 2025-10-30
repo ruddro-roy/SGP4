@@ -1,6 +1,22 @@
 """
-Live SGP4 Implementation using proven sgp4 library
-Making SGP4 live with accurate propagation
+Live SGP4 Satellite Tracking
+
+Provides satellite tracking capabilities using the proven sgp4 library.
+Manages multiple satellites and provides propagation, caching, and state export.
+
+Features:
+- Load and track multiple satellites from TLE data
+- Propagate to arbitrary times
+- Cache propagation results for efficiency
+- Export satellite state in various formats
+- Coordinate transformations (TEME to geodetic)
+
+This module is suitable for building satellite tracking applications and
+demonstrates best practices for using the sgp4 library in production-like
+scenarios.
+
+Note: For real-time tracking, ensure TLE data is kept current (updated at least
+weekly for LEO satellites, less frequently for higher orbits).
 """
 
 import math
