@@ -1,4 +1,12 @@
-# Description: This file contains constants used across the orbit-service application.
+"""
+Constants and Reference Data
+
+This module provides fallback TLE data for demonstrations and testing.
+The hardcoded ISS TLE should be updated periodically for accuracy.
+
+Note: For operational use, always fetch current TLE data from authoritative
+sources like Space-Track.org or CelesTrak.
+"""
 
 # Hardcoded ISS fallback TLE (as of August 2025)
 # This is used as a fallback for the demo endpoint when live TLE data is unavailable.

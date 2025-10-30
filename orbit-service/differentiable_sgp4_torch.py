@@ -1,6 +1,22 @@
 """
 Differentiable SGP4 Implementation using PyTorch
-Wraps proven sgp4 library with torch.autograd for ML enhancements
+
+This module provides a PyTorch-compatible wrapper around the proven sgp4 library
+(based on Vallado et al. 2006). The wrapper enables automatic differentiation through
+the orbital propagation chain while maintaining the accuracy of the established
+SGP4 implementation.
+
+Architecture:
+- Uses the official sgp4 library (sgp4==2.23) for core propagation
+- Wraps results in PyTorch tensors to enable gradient computation
+- Optional neural network for learned corrections (experimental)
+
+This approach prioritizes correctness by delegating to the proven implementation
+rather than reimplementing the complex SGP4 algorithm from scratch.
+
+References:
+- Vallado, D. A., et al. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753
+- Rhodes, B. sgp4 library: https://pypi.org/project/sgp4/
 """
 
 import torch

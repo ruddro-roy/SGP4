@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
 """
 Orbital Propagation Demonstration
-Shows the orbital propagation functionality with TEME coordinate calculation
+
+Demonstrates SGP4 orbital propagation with:
+- Position and velocity calculation in TEME coordinates
+- 3D orbit visualization
+- Sensitivity analysis for drag coefficient variations
+- Ground track plotting
+
+This script shows how small changes in orbital parameters (especially the B* drag
+coefficient) can affect long-term propagation accuracy. The analysis uses the
+proven sgp4 library for reliable results.
+
+Educational purpose: Understanding how atmospheric drag affects satellite orbits
+over time, particularly for low Earth orbit satellites.
 """
 
 import math
