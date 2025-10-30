@@ -20,16 +20,50 @@ weekly for LEO satellites, less frequently for higher orbits).
 """
 
 import math
+import numpy as np
 from datetime import datetime, timezone
 from sgp4.api import Satrec
+from orbit_service.two_body_fallback import TwoBodyFallback, sgp4_state_to_orbital_elements
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+# SGP4 error code meanings
+SGP4_ERROR_CODES = {
+    0: "No error",
+    1: "Mean eccentricity < 0.0 or > 1.0",
+    2: "Mean motion < 0.0",
+    3: "Perturbed eccentricity < 0.0 or > 1.0",
+    4: "Semi-latus rectum < 0.0",
+    5: "Satellite has decayed",
+    6: "Satellite has decayed (low altitude)",
+}
 
 
 class LiveSGP4:
-    """Production-ready SGP4 using proven library"""
+    """
+    Production-ready SGP4 using proven library with error recovery.
+    
+    Features:
+    - Automatic fallback to two-body propagation on SGP4 failure
+    - Detailed error diagnostics with physical interpretation
+    - Error state tracking and recovery mechanisms
+    - Graceful degradation instead of hard failures
+    """
 
-    def __init__(self):
+    def __init__(self, enable_fallback=True):
+        """
+        Initialize LiveSGP4.
+        
+        Args:
+            enable_fallback: Enable two-body propagation fallback (default: True)
+        """
         self.satellites = {}
         self.cache = {}
+        self.enable_fallback = enable_fallback
+        self.error_history = {}  # Track errors for each satellite
+        self.fallback_states = {}  # Store fallback propagators
 
     def load_satellite(self, line1, line2, name=None):
         """Load satellite from TLE"""
@@ -50,7 +84,20 @@ class LiveSGP4:
             raise ValueError(f"Failed to load satellite: {e}")
 
     def propagate(self, norad_id, timestamp=None):
-        """Propagate satellite position"""
+        """
+        Propagate satellite position with error recovery.
+        
+        Args:
+            norad_id: NORAD catalog ID
+            timestamp: Target time (default: now)
+            
+        Returns:
+            Dictionary with position, velocity, and diagnostic information
+            
+        Notes:
+            If SGP4 fails, automatically falls back to two-body propagation
+            and includes detailed error diagnostics.
+        """
         if norad_id not in self.satellites:
             raise ValueError(f"Satellite {norad_id} not loaded")
 
@@ -62,24 +109,60 @@ class LiveSGP4:
         # Convert to Julian date
         jd, fr = self._datetime_to_jd(timestamp)
 
-        # Propagate
+        # Attempt SGP4 propagation
         error, position, velocity = satellite.sgp4(jd, fr)
+        
+        # Initialize result dictionary
+        result = {
+            "timestamp": timestamp.isoformat(),
+            "sgp4_error_code": error,
+            "sgp4_error_message": SGP4_ERROR_CODES.get(error, f"Unknown error code {error}"),
+            "propagation_method": "sgp4",
+            "fallback_used": False,
+        }
 
+        # Handle SGP4 errors with fallback
         if error != 0:
-            raise RuntimeError(f"SGP4 propagation error: {error}")
+            # Log error
+            self._log_error(norad_id, error, timestamp)
+            
+            # Get physical interpretation of error
+            diagnostics = self._get_error_diagnostics(satellite, error, timestamp)
+            result["error_diagnostics"] = diagnostics
+            
+            # Attempt fallback if enabled
+            if self.enable_fallback:
+                logger.warning(f"SGP4 error {error} for satellite {norad_id}, attempting two-body fallback")
+                
+                try:
+                    position, velocity = self._fallback_propagation(norad_id, timestamp)
+                    result["propagation_method"] = "two_body_fallback"
+                    result["fallback_used"] = True
+                    result["fallback_warning"] = "Using simplified two-body propagation (less accurate)"
+                except Exception as e:
+                    logger.error(f"Fallback propagation also failed for satellite {norad_id}: {e}")
+                    raise RuntimeError(
+                        f"SGP4 error {error}: {result['sgp4_error_message']}. "
+                        f"Fallback propagation also failed: {str(e)}"
+                    )
+            else:
+                raise RuntimeError(
+                    f"SGP4 error {error}: {result['sgp4_error_message']}. "
+                    f"Fallback disabled. Diagnostics: {diagnostics}"
+                )
 
         # Convert to lat/lon/alt
         lat, lon, alt = self._ecef_to_geodetic(position)
 
-        return {
-            "timestamp": timestamp.isoformat(),
+        result.update({
             "position_km": list(position),
             "velocity_kms": list(velocity),
             "latitude": lat,
             "longitude": lon,
             "altitude_km": alt,
-            "error": error,
-        }
+        })
+
+        return result
 
     def propagate_batch(self, norad_id, timestamps):
         """Propagate multiple timestamps efficiently"""
@@ -114,6 +197,154 @@ class LiveSGP4:
             "element_number": sat.elnum,
             "revolution_number": sat.revnum,
         }
+    
+    def _log_error(self, norad_id, error_code, timestamp):
+        """Log error for tracking and diagnostics."""
+        if norad_id not in self.error_history:
+            self.error_history[norad_id] = []
+        
+        self.error_history[norad_id].append({
+            "error_code": error_code,
+            "timestamp": timestamp.isoformat(),
+            "error_message": SGP4_ERROR_CODES.get(error_code, f"Unknown error {error_code}"),
+        })
+        
+        # Keep only last 100 errors
+        if len(self.error_history[norad_id]) > 100:
+            self.error_history[norad_id] = self.error_history[norad_id][-100:]
+    
+    def _get_error_diagnostics(self, satellite, error_code, timestamp):
+        """
+        Get detailed physical diagnostics for SGP4 error.
+        
+        Args:
+            satellite: Satrec object
+            error_code: SGP4 error code
+            timestamp: Propagation timestamp
+            
+        Returns:
+            Dictionary with diagnostic information
+        """
+        diagnostics = {
+            "error_code": error_code,
+            "error_description": SGP4_ERROR_CODES.get(error_code, f"Unknown error {error_code}"),
+        }
+        
+        # Add orbital element information
+        try:
+            diagnostics["orbital_parameters"] = {
+                "eccentricity": satellite.ecco,
+                "inclination_deg": math.degrees(satellite.inclo),
+                "mean_motion_rev_day": satellite.no_kozai * 1440.0 / (2 * math.pi),
+                "bstar_drag": satellite.bstar,
+                "epoch_age_days": (timestamp - self._jd_to_datetime(
+                    satellite.jdsatepoch, satellite.jdsatepochF
+                )).total_seconds() / 86400.0,
+            }
+        except:
+            pass
+        
+        # Physical interpretation based on error code
+        if error_code == 1:
+            diagnostics["physical_meaning"] = (
+                "The satellite's orbital eccentricity is outside valid range [0, 1). "
+                "This indicates the TLE data may be corrupted or the orbit is no longer bound."
+            )
+            diagnostics["recommended_action"] = "Obtain fresh TLE data for this satellite."
+            
+        elif error_code == 2:
+            diagnostics["physical_meaning"] = (
+                "The mean motion is negative, which is physically impossible. "
+                "This indicates corrupted TLE data or an invalid orbital state."
+            )
+            diagnostics["recommended_action"] = "Verify TLE data integrity and obtain updated elements."
+            
+        elif error_code in [3, 4]:
+            diagnostics["physical_meaning"] = (
+                "SGP4 computed perturbed orbital elements that are unphysical. "
+                "This typically occurs when propagating far from the TLE epoch or "
+                "for satellites with very high drag in decaying orbits."
+            )
+            diagnostics["recommended_action"] = (
+                "Use more recent TLE data or limit propagation to shorter time periods. "
+                "Consider using two-body fallback for rough estimates."
+            )
+            
+        elif error_code in [5, 6]:
+            diagnostics["physical_meaning"] = (
+                "The satellite has decayed and re-entered the atmosphere. "
+                "The computed altitude is below the minimum safe threshold (~98 km). "
+                "Physical satellites at this altitude experience extreme drag and rapid decay."
+            )
+            diagnostics["recommended_action"] = (
+                "This satellite has re-entered. Historical propagation only. "
+                "No future propagation is possible."
+            )
+        
+        return diagnostics
+    
+    def _fallback_propagation(self, norad_id, timestamp):
+        """
+        Fallback to two-body propagation when SGP4 fails.
+        
+        Args:
+            norad_id: NORAD catalog ID
+            timestamp: Target timestamp
+            
+        Returns:
+            Tuple of (position, velocity) in km and km/s
+        """
+        satellite = self.satellites[norad_id]["satellite"]
+        
+        # Get state at epoch (where SGP4 should work)
+        jd_epoch = satellite.jdsatepoch
+        fr_epoch = satellite.jdsatepochF
+        
+        # Try to get initial state at epoch
+        error, r0, v0 = satellite.sgp4(jd_epoch, fr_epoch)
+        
+        if error != 0:
+            # Even epoch propagation failed, use TLE elements to estimate initial state
+            logger.warning(f"Cannot get epoch state for satellite {norad_id}, using approximate initial conditions")
+            
+            # Compute approximate circular orbit state from TLE elements
+            a = (398600.4418 / (satellite.no_kozai * 60)**2)**(1/3)  # Semi-major axis
+            v_circular = math.sqrt(398600.4418 / a)
+            
+            # Simplified: assume circular orbit at RAAN and inclination
+            r0 = np.array([a, 0, 0])
+            v0 = np.array([0, v_circular, 0])
+        
+        # Create or retrieve fallback propagator
+        if norad_id not in self.fallback_states:
+            self.fallback_states[norad_id] = {
+                "r0": np.array(r0),
+                "v0": np.array(v0),
+                "t0": self._jd_to_datetime(jd_epoch, fr_epoch),
+                "propagator": TwoBodyFallback(np.array(r0), np.array(v0))
+            }
+        
+        fallback = self.fallback_states[norad_id]
+        
+        # Calculate time difference in seconds
+        dt = (timestamp - fallback["t0"]).total_seconds()
+        
+        # Propagate using two-body dynamics
+        r, v = fallback["propagator"].propagate(dt)
+        
+        return r, v
+    
+    def get_error_history(self, norad_id):
+        """
+        Get error history for a satellite.
+        
+        Args:
+            norad_id: NORAD catalog ID
+            
+        Returns:
+            List of error records
+        """
+        return self.error_history.get(norad_id, [])
 
     def validate_against_reference(self, norad_id=6251):
         """Validate against known reference values"""

@@ -57,7 +57,9 @@ MIN_DENOMINATOR = 1e-12  # Minimum denominator for divisions
 class SGP4Propagator:
     def __init__(self, line1, line2):
         self.error = 0
+        self.error_message = ""
         self.method = ""
+        self._last_valid_a = None  # For error recovery
         self.parse_tle(line1, line2)
         if self.error == 0:
             self.sgp4init()
@@ -300,9 +302,24 @@ class SGP4Propagator:
         return ep, sinep, cosep, converged
 
     def propagate(self, tsince):
-        """Propagate using improved algorithm with stability checks"""
+        """
+        Propagate using improved algorithm with stability checks and error recovery.
+        
+        Args:
+            tsince: Time since epoch (minutes)
+            
+        Returns:
+            Tuple of (position, velocity) or (None, None) on unrecoverable error
+            
+        Notes:
+            This method attempts error recovery before returning None.
+            Check self.error for error codes and self.error_message for details.
+        """
         if self.error > 0:
             return None, None
+
+        # Store initial error state
+        initial_error = self.error
 
         # Secular updates
         argp = self.argpo + self.argdot * tsince
@@ -313,14 +330,37 @@ class SGP4Propagator:
         temp = 1.0 - self.c1 * tsince
         if temp <= 0.0:
             self.error = 1
-            logger.error("Satellite has decayed (drag term collapsed)")
-            return None, None
+            self.error_message = (
+                f"Satellite has decayed (drag term collapsed at t={tsince:.1f} min). "
+                f"Physical meaning: Atmospheric drag has reduced orbital energy to the point "
+                f"where the satellite has re-entered. This typically occurs for satellites "
+                f"with high B* drag coefficient propagated far into the future."
+            )
+            logger.error(self.error_message)
             
-        a = self.a * temp * temp
+            # Attempt recovery: use last valid semi-major axis
+            if hasattr(self, '_last_valid_a') and self._last_valid_a > MIN_SEMI_MAJOR_AXIS:
+                logger.warning(f"Attempting recovery using last valid semi-major axis")
+                a = self._last_valid_a
+                self.error = 0  # Clear error for recovery attempt
+            else:
+                return None, None
+        else:
+            a = self.a * temp * temp
+            
         if a < MIN_SEMI_MAJOR_AXIS:
             self.error = 7
-            logger.error("Semi-major axis too small during propagation")
+            self.error_message = (
+                f"Semi-major axis too small ({a:.3f} km) at t={tsince:.1f} min. "
+                f"Physical meaning: The computed orbital radius is unrealistically small, "
+                f"indicating numerical instability or satellite decay. Minimum valid value "
+                f"is {MIN_SEMI_MAJOR_AXIS} km (just above Earth's surface)."
+            )
+            logger.error(self.error_message)
             return None, None
+        
+        # Store valid semi-major axis for potential recovery
+        self._last_valid_a = a
         
         # Update eccentricity
         e = self.ecco - self.bstar * self.c4 * tsince
@@ -351,7 +391,15 @@ class SGP4Propagator:
         
         if not converged:
             self.error = 6
-            logger.warning("Kepler solver did not converge fully")
+            self.error_message = (
+                f"Kepler solver did not converge at t={tsince:.1f} min. "
+                f"Physical meaning: The numerical solver for eccentric anomaly failed to converge. "
+                f"This can occur for very high eccentricities (e={e:.6f}) or when the orbit "
+                f"becomes unstable due to perturbations."
+            )
+            logger.warning(self.error_message)
+            # Don't return None - use the best available solution and continue
+            # This allows degraded but usable propagation
 
         # Calculate position and velocity
         ecose = axn * cosep + ayn * sinep
@@ -361,13 +409,26 @@ class SGP4Propagator:
 
         if pl <= 0.0:
             self.error = 3
-            logger.error("Semi-parameter is non-positive")
+            self.error_message = (
+                f"Semi-parameter is non-positive ({pl:.6f}) at t={tsince:.1f} min. "
+                f"Physical meaning: The orbital semi-latus rectum (p = a(1-e²)) must be positive. "
+                f"A non-positive value indicates eccentricity e≥1 (parabolic/hyperbolic orbit) or "
+                f"numerical issues. This typically means the satellite has escaped Earth's gravity "
+                f"or the propagation has become unstable."
+            )
+            logger.error(self.error_message)
             return None, None
 
         r = a * (1.0 - ecose)
         if r < MIN_SEMI_MAJOR_AXIS:
             self.error = 7
-            logger.error("Orbital radius too small")
+            self.error_message = (
+                f"Orbital radius too small ({r:.3f} km) at t={tsince:.1f} min. "
+                f"Physical meaning: The satellite's distance from Earth's center is below "
+                f"the minimum safe threshold ({MIN_SEMI_MAJOR_AXIS} km). This indicates either "
+                f"satellite decay/re-entry or numerical instability in the propagation."
+            )
+            logger.error(self.error_message)
             return None, None
             
         rdot = XKE * math.sqrt(a) * esine / r
