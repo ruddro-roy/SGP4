@@ -54,10 +54,17 @@ class DifferentiableSGP4(nn.Module):
             nn.ReLU(),
             nn.Linear(8, 6),  # [dx, dy, dz, dvx, dvy, dvz]
         )
+        
+        # Error tracking
+        self.last_error = 0
+        self.last_error_time = None
+        self._last_valid_r = None
+        self._last_valid_v = None
+        self._last_valid_time = None
 
     def forward(self, tsince_minutes):
         """
-        Forward propagation with differentiable corrections
+        Forward propagation with differentiable corrections and error handling.
 
         Args:
             tsince_minutes: Time since epoch in minutes (tensor)
@@ -65,6 +72,10 @@ class DifferentiableSGP4(nn.Module):
         Returns:
             position: [x, y, z] in km (tensor)
             velocity: [vx, vy, vz] in km/s (tensor)
+            
+        Notes:
+            On SGP4 error, returns last known valid state or zeros with warning.
+            Error information is stored in self.last_error for diagnostics.
         """
         # tsince_minutes is the time since TLE epoch in minutes
         if not isinstance(tsince_minutes, torch.Tensor):
@@ -78,17 +89,53 @@ class DifferentiableSGP4(nn.Module):
         jd = self.satellite.jdsatepoch + tsince_np / 1440.0
         error, r_km, v_km_s = self.satellite.sgp4(jd, 0.0)
 
+        # Store error information
+        self.last_error = error
+        self.last_error_time = tsince_np
+
         if error != 0:
-            # Return zeros if propagation failed
-            return torch.zeros(3, device=tsince_minutes.device), torch.zeros(
-                3, device=tsince_minutes.device
+            # Log error with diagnostic information
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            error_messages = {
+                1: "Mean eccentricity out of range",
+                2: "Mean motion negative",
+                3: "Perturbed eccentricity out of range",
+                4: "Semi-latus rectum negative",
+                5: "Satellite decayed",
+                6: "Satellite decayed (low altitude)",
+            }
+            
+            error_msg = error_messages.get(error, f"Unknown error {error}")
+            logger.warning(
+                f"SGP4 error {error} ({error_msg}) at t={tsince_np:.1f} min. "
+                f"Returning degraded state."
             )
+            
+            # Attempt to use last valid state if available
+            if hasattr(self, '_last_valid_r') and hasattr(self, '_last_valid_v'):
+                logger.info("Using last valid state as fallback")
+                r_tensor = self._last_valid_r.clone()
+                v_tensor = self._last_valid_v.clone()
+            else:
+                # Return zeros as last resort (better than crashing)
+                logger.warning("No valid state available, returning zeros")
+                r_tensor = torch.zeros(3, device=tsince_minutes.device, dtype=torch.float32)
+                v_tensor = torch.zeros(3, device=tsince_minutes.device, dtype=torch.float32)
+            
+            return r_tensor, v_tensor
 
         # Convert to tensors
         r_tensor = torch.tensor(r_km, dtype=torch.float32, device=tsince_minutes.device)
         v_tensor = torch.tensor(
             v_km_s, dtype=torch.float32, device=tsince_minutes.device
         )
+        
+        # Store as last valid state for potential fallback
+        self._last_valid_r = r_tensor.clone().detach()
+        self._last_valid_v = v_tensor.clone().detach()
+        self._last_valid_time = tsince_np
 
         # Apply ML corrections if enabled
         if self.training:

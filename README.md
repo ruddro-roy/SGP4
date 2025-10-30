@@ -8,6 +8,10 @@ Python utilities for the SGP4 (Simplified General Perturbations 4) orbit propaga
 - Propagate orbits with the canonical SGP4 equations
 - Optional PyTorch module for gradient-based analysis
 - Coordinate transforms (TEME to ECEF) and drag sensitivity utilities
+- **Error recovery and fallback mechanisms** ⭐ NEW
+  - Automatic fallback to two-body propagation on SGP4 failure
+  - Detailed error diagnostics with physical interpretation
+  - Graceful degradation instead of crashes
 - Demo scripts and unit tests for getting started quickly
 
 ## Installation
@@ -66,12 +70,38 @@ loss.backward()
 print(tsince.grad)
 ```
 
+### Error recovery and fallback
+
+```python
+from orbit_service.live_sgp4 import LiveSGP4
+
+# Create SGP4 instance with automatic fallback enabled
+sgp4 = LiveSGP4(enable_fallback=True)
+norad_id = sgp4.load_satellite(line1, line2, "ISS")
+
+# Propagate with automatic error recovery
+result = sgp4.propagate(norad_id, timestamp)
+
+# Check if fallback was used
+if result['fallback_used']:
+    print(f"Warning: {result['fallback_warning']}")
+
+# Access error diagnostics if needed
+if result['sgp4_error_code'] != 0:
+    diag = result['error_diagnostics']
+    print(f"Error: {diag['physical_meaning']}")
+    print(f"Action: {diag['recommended_action']}")
+```
+
+See [ERROR_RECOVERY.md](ERROR_RECOVERY.md) for detailed documentation.
+
 ### Demo scripts
 
 ```bash
-python demo.py              # run the default demo
-python demo.py --sensitivity  # explore B* drag effects
-python demo.py --verbose      # enable detailed logging
+python demo.py                    # run the default demo
+python demo.py --sensitivity      # explore B* drag effects
+python demo.py --verbose          # enable detailed logging
+python demo_error_recovery.py     # demonstrate error recovery features
 ```
 
 ## Testing
