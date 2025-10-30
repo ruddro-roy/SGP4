@@ -1,38 +1,33 @@
-# SGP4 Orbital Propagation with Differentiable Computing
+# SGP4 Orbital Propagation
 
-This project implements SGP4 (Simplified General Perturbations Satellite Orbit Model 4) orbital propagation with support for automatic differentiation using PyTorch. The implementation follows the SGP4 model as described in Vallado et al. (2006) "Revisiting Spacetrack Report #3" (AAS 06-675) and uses WGS-72 gravitational constants.
+Research-grade Python implementation of SGP4 orbital propagation with support for automatic differentiation.
 
 ## Overview
 
-SGP4 is a widely used analytical propagation model for satellites in Earth orbit. This implementation provides:
+This package provides SGP4 (Simplified General Perturbations Satellite Orbit Model 4) orbital propagation capabilities for satellite orbit prediction. The implementation follows Vallado et al. (2006) specifications and uses the proven `sgp4` library for accurate results.
 
-- Standard SGP4 propagation using the proven sgp4 library (Vallado et al.)
-- TLE (Two-Line Element) parsing and validation
-- Differentiable wrapper using PyTorch for gradient-based analysis
+**Key Features:**
+- TLE parsing and validation
+- SGP4 orbital propagation using established algorithms
+- PyTorch wrapper for automatic differentiation
 - Coordinate transformations (TEME to ECEF)
-- Sensitivity analysis tools for drag coefficients and other parameters
-
-## Technical Approach
-
-The project uses the established SGP4 library as the core propagator and wraps it with PyTorch to enable automatic differentiation. This allows gradient computation through the propagation chain while maintaining the accuracy of the proven implementation.
-
-### Key Components
-
-**TLE Parser** (`tle_parser.py`): Parses Two-Line Element sets according to standard specifications, extracts orbital elements, and reconstructs TLE strings with modified parameters.
-
-**Differentiable SGP4** (`differentiable_sgp4_torch.py`): PyTorch wrapper around the sgp4 library that enables gradient computation and includes an optional neural network for learned corrections.
-
-**Reference Implementations** (`sgp4_reference.py`, `sgp4_final.py`, `sgp4_corrected.py`): Pure Python implementations of SGP4 for educational purposes and validation, implementing the algorithm from AAS 06-675.
-
-**Demonstration Scripts**: Scripts showing orbital propagation, B* drag coefficient sensitivity, and other analyses.
+- B* drag coefficient sensitivity analysis
+- Educational reference implementation
 
 ## Installation
 
 ```bash
 git clone https://github.com/ruddro-roy/SGP4-experiment.git
 cd SGP4-experiment
-pip install -r orbit-service/requirements.txt
+pip install -r requirements.txt
 ```
+
+**Requirements:**
+- Python 3.8+
+- sgp4 >= 2.23
+- numpy >= 1.26.2
+- matplotlib >= 3.8.2
+- torch >= 2.2.0 (optional, for differentiable features)
 
 ## Usage
 
@@ -49,14 +44,25 @@ jd, fr = 2458826.5, 0.0
 error, position, velocity = satellite.sgp4(jd, fr)
 ```
 
+### TLE Parsing
+
+```python
+from orbit_service.tle_parser import TLEParser
+
+parser = TLEParser()
+tle_data = parser.parse_tle(line1, line2, name="ISS")
+print(f"B* drag: {tle_data['bstar_drag']:.8e}")
+print(f"Inclination: {tle_data['inclination_deg']:.4f} deg")
+```
+
 ### Differentiable Propagation
 
 ```python
-from orbit-service.differentiable_sgp4_torch import DifferentiableSGP4
+from orbit_service.differentiable_sgp4_torch import DifferentiableSGP4
 import torch
 
 dsgp4 = DifferentiableSGP4(line1, line2)
-tsince = torch.tensor(360.0, requires_grad=True)  # 360 minutes
+tsince = torch.tensor(360.0, requires_grad=True)
 position, velocity = dsgp4(tsince)
 
 # Compute gradients
@@ -65,108 +71,109 @@ loss.backward()
 gradient = tsince.grad
 ```
 
-### TLE Parsing
-
-```python
-from orbit-service.tle_parser import TLEParser
-
-parser = TLEParser()
-tle_data = parser.parse_tle(line1, line2, name="ISS")
-print(f"B* drag coefficient: {tle_data['bstar_drag']:.8e}")
-print(f"Eccentricity: {tle_data['eccentricity']:.6f}")
-print(f"Inclination: {tle_data['inclination_deg']:.4f} degrees")
-```
-
 ### Running Demonstrations
 
 ```bash
-cd orbit-service
+# Basic demonstration
+python demo.py
 
-# Basic propagation demonstration
-python propagation_demo.py
+# With B* sensitivity analysis
+python demo.py --sensitivity
 
-# B* drag sensitivity analysis
-python bstar_sensitivity_test.py
-
-# Simple B* demonstration
-python bstar_demo_simple.py
+# With verbose logging
+python demo.py --verbose
 ```
-
-## Implementation Details
-
-### Constants
-
-All implementations use WGS-72 gravitational constants as specified for SGP4:
-
-- Gravitational parameter (μ): 398600.8 km³/s²
-- Earth radius (R_E): 6378.135 km
-- J2: 0.00108262998905892
-- J3: -0.00000253215306
-- J4: -0.00000165597
-
-### Coordinate Systems
-
-The implementation handles the following coordinate frames:
-
-- **TEME** (True Equator Mean Equinox): The native output frame of SGP4
-- **ECEF** (Earth-Centered Earth-Fixed): Ground station coordinates, converted via GMST rotation
-
-### TLE Format
-
-Two-Line Element sets follow the standard format:
-
-```
-Line 1: 1 NNNNNC NNNNNAAA NNNNN.NNNNNNNN +.NNNNNNNN +NNNNN-N +NNNNN-N N NNNNN
-Line 2: 2 NNNNN NNN.NNNN NNN.NNNN NNNNNNN NNN.NNNN NNN.NNNN NN.NNNNNNNNNNNNNN
-```
-
-Key fields include:
-- Epoch (year and day of year)
-- Mean motion and derivatives
-- B* drag term (ballistic coefficient)
-- Classical orbital elements (inclination, RAAN, eccentricity, argument of perigee, mean anomaly)
 
 ## Testing
 
-Run the test suite:
-
 ```bash
-cd orbit-service
-python test_sgp4.py
-python test_both_implementations.py
+python -m pytest tests/ -v
 ```
 
-## Dependencies
+## Project Structure
 
-- `sgp4>=2.23`: Official SGP4 implementation by Brandon Rhodes (based on Vallado et al.)
-- `numpy>=1.26.2`: Numerical computations
-- `matplotlib>=3.8.2`: Plotting and visualization
-- `torch>=2.2.0`: Automatic differentiation (optional, for differentiable features)
+```
+SGP4-experiment/
+├── orbit_service/          # Main package
+│   ├── tle_parser.py       # TLE parsing and propagation
+│   ├── differentiable_sgp4_torch.py  # PyTorch wrapper
+│   ├── sgp4_reference.py   # Educational reference
+│   ├── live_sgp4.py        # Production tracking
+│   └── perturbation_scanner.py  # Deviation analysis
+├── tests/                  # Unit tests
+├── demo.py                 # Demonstration script
+├── config.py               # Configuration and constants
+├── logging_config.py       # Logging configuration
+└── requirements.txt        # Dependencies
+```
+
+## Physical Constants
+
+Uses WGS-72 gravitational constants as specified for SGP4:
+- Earth radius: 6378.135 km
+- Gravitational parameter μ: 398600.8 km³/s²
+- J2: 0.00108262998905892
 
 ## References
 
-1. Vallado, D. A., Crawford, P., Hujsak, R., & Kelso, T. S. (2006). "Revisiting Spacetrack Report #3." AIAA 2006-6753, AIAA/AAS Astrodynamics Specialist Conference.
+**Primary Reference:**
+Vallado, D. A., Crawford, P., Hujsak, R., & Kelso, T. S. (2006). Revisiting Spacetrack Report #3. AIAA 2006-6753, AIAA/AAS Astrodynamics Specialist Conference.
 
-2. Hoots, F. R., & Roehrich, R. L. (1980). "Models for Propagation of NORAD Element Sets." Spacetrack Report No. 3.
+**Additional References:**
+- Hoots, F. R., & Roehrich, R. L. (1980). Models for Propagation of NORAD Element Sets. Spacetrack Report No. 3.
+- Vallado, D. A. (2013). Fundamentals of Astrodynamics and Applications (4th ed.). Microcosm Press.
 
-3. Vallado, D. A. (2013). "Fundamentals of Astrodynamics and Applications" (4th ed.). Microcosm Press.
+## Citation
+
+If you use this code in your research, please cite:
+
+```
+@misc{sgp4_experiment,
+  author = {Roy, Ruddro},
+  title = {SGP4 Orbital Propagation with Differentiable Computing},
+  year = {2025},
+  url = {https://github.com/ruddro-roy/SGP4-experiment}
+}
+```
+
+## Disclaimer
+
+**This software is for research and educational purposes only.**
+
+This implementation is NOT intended for:
+- Operational satellite tracking
+- Safety-critical applications
+- Real-time collision avoidance
+- Regulatory compliance
+- Navigation or guidance systems
+
+For operational use cases requiring high precision and reliability:
+- Use certified tracking systems
+- Obtain TLE data from authoritative sources (Space-Track.org, CelesTrak)
+- Consult with orbital mechanics specialists
+- Follow established aerospace safety protocols
+
+**No warranty is provided. Use at your own risk.**
+
+## TLE Data Updates
+
+The fallback TLE data in `config.py` should be updated periodically:
+- **LEO satellites:** Weekly
+- **MEO satellites:** Monthly  
+- **GEO satellites:** Quarterly
+
+Sources for current TLE data:
+- [Space-Track.org](https://www.space-track.org/) (requires registration)
+- [CelesTrak.org](https://celestrak.org/) (public access)
 
 ## License
 
-This project is provided for educational and research purposes. For operational satellite tracking, use certified tracking systems.
+This project is provided for educational and research purposes.
 
-## Limitations
+## Contributing
 
-This implementation is suitable for:
-- Learning orbital mechanics concepts
-- Sensitivity analysis and gradient-based optimization
-- TLE parsing and manipulation
-- Educational demonstrations
-
-It is not intended for:
-- Operational satellite tracking requiring high precision
-- Safety-critical applications
-- Real-time collision avoidance
-- Regulatory compliance scenarios
-
-For production use cases, consult with orbital mechanics specialists and use certified tracking systems.
+Contributions are welcome. Please ensure:
+- Code follows PEP 8 style guidelines
+- All functions have type hints and docstrings
+- Tests pass before submitting pull requests
+- No emojis or informal comments in code
