@@ -23,7 +23,11 @@ References:
 - Hoots, F. R., & Roehrich, R. L. (1980). "Spacetrack Report No. 3"
 """
 
+import logging
 import math
+
+
+logger = logging.getLogger(__name__)
 
 DEG2RAD = math.pi / 180.0
 RAD2DEG = 180.0 / math.pi
@@ -76,9 +80,7 @@ class SGP4Propagator:
 
         except (ValueError, IndexError) as e:
             self.error = 4
-            import logging
-
-            logging.getLogger(__name__).error(f"TLE parsing error: {e}")
+            logger.error(f"TLE parsing error: {e}")
 
     def exp_to_dec(self, mant_str, exp_str):
         """Parse TLE exponential notation correctly"""
@@ -114,6 +116,11 @@ class SGP4Propagator:
 
     def sgp4init(self):
         """Initialize SGP4 with user's exact algorithm"""
+        if abs(self.no_kozai) < 1e-12:
+            self.error = 5
+            logger.error("Mean motion is effectively zero; cannot initialize orbit")
+            return
+
         self.orig_no = self.no_kozai
 
         # Basic trigonometric quantities
@@ -131,8 +138,21 @@ class SGP4Propagator:
 
         # delta1 = (3/2) * j2 * (3cos(i)^2 -1) / ( (1-e^2)^{3/2} * ao^4 * no )
         betao2 = 1.0 - self.ecco * self.ecco
+        if betao2 <= 0.0:
+            if betao2 < -1e-8:
+                self.error = 5
+                logger.error("Eccentricity exceeds valid range; cannot initialize")
+                return
+            betao2 = 1e-12
         betao = math.sqrt(betao2)
-        delta1 = 1.5 * J2 * self.x3thm1 / (betao * betao2 * ao * ao * self.no_kozai)
+
+        denom_delta1 = betao * betao2 * ao * ao * self.no_kozai
+        if abs(denom_delta1) < 1e-12:
+            self.error = 5
+            logger.error("Delta1 denominator underflow; aborting initialization")
+            return
+
+        delta1 = 1.5 * J2 * self.x3thm1 / denom_delta1
 
         # ao = ao * (1 - delta1/3 - delta1^2 - 134*delta1^3/81)
         ao = ao * (
@@ -143,13 +163,28 @@ class SGP4Propagator:
         )
 
         # no = no / (1 + delta1)
-        self.no = self.no_kozai / (1.0 + delta1)
+        denom_no = 1.0 + delta1
+        if abs(denom_no) < 1e-12:
+            self.error = 5
+            logger.error("Corrected mean motion denominator too small")
+            return
+        self.no = self.no_kozai / denom_no
+
+        if self.no <= 0.0:
+            self.error = 5
+            logger.error("Corrected mean motion became non-positive")
+            return
 
         # Recalculate with corrected mean motion
         self.a = math.pow(XKE / self.no, X2O3)
-        self.betao = math.sqrt(1.0 - self.ecco * self.ecco)
-        self.betao2 = 1.0 - self.ecco * self.ecco
+        self.betao = betao
+        self.betao2 = betao2
         self.p = self.a * self.betao2
+
+        if self.p <= 0.0:
+            self.error = 5
+            logger.error("Semi-latus rectum is non-positive; invalid orbit")
+            return
 
         # Deep space check (period >= 225 minutes)
         if (TWOPI / self.no) >= 225.0:
@@ -212,8 +247,13 @@ class SGP4Propagator:
         temp = 1.0 - self.c1 * tsince
         if temp <= 0.0:
             self.error = 1
+            logger.error("Propagation aborted: drag term collapsed semi-major axis")
             return None, None
         a = self.a * temp * temp
+        if a <= 0.0:
+            self.error = 7
+            logger.error("Propagation aborted: semi-major axis became non-positive")
+            return None, None
         # e = ecco - betao * tsince where betao = bstar * c4
         e = self.ecco - self.bstar * self.c4 * tsince
 
@@ -221,12 +261,25 @@ class SGP4Propagator:
             e = 1e-6
         if e >= 1.0:
             self.error = 2
+            logger.error("Propagation aborted: eccentricity exceeded parabolic limit")
             return None, None
 
         # Long period periodics
-        beta = math.sqrt(1.0 - e * e)
+        beta_sq = 1.0 - e * e
+        if beta_sq <= 0.0:
+            if beta_sq < -1e-8:
+                self.error = 2
+                logger.error("Propagation aborted: eccentricity drove beta^2 negative")
+                return None, None
+            beta_sq = 1e-12
+        beta = math.sqrt(beta_sq)
         axn = e * math.cos(argp)
-        temp = 1.0 / (a * beta * beta)
+        denom_long = a * beta * beta
+        if abs(denom_long) < 1e-12:
+            self.error = 7
+            logger.error("Propagation aborted: long-period denominator too small")
+            return None, None
+        temp = 1.0 / denom_long
         xll = temp * self.xlcof * axn
         aynl = temp * self.aycof
         xl = m + argp + omg + xll
@@ -235,15 +288,19 @@ class SGP4Propagator:
         # Kepler Solve from user spec
         # u = math.fmod(m + argp + omg, 2pi)
         u = math.fmod(xl, TWOPI)
+        if u < 0.0:
+            u += TWOPI
         ep = u
+        converged = False
 
         for iter in range(10):
             sinep = math.sin(ep)
             cosep = math.cos(ep)
             # delta_ep = (u - ayn*cos(ep) + axn*sin(ep) - ep) / (1 - axn*cos(ep) - ayn*sin(ep))
-            delta_ep = (u - ayn * cosep + axn * sinep - ep) / (
-                1.0 - axn * cosep - ayn * sinep
-            )
+            denom_kepler = 1.0 - axn * cosep - ayn * sinep
+            if abs(denom_kepler) < 1e-12:
+                denom_kepler = 1e-12 if denom_kepler >= 0.0 else -1e-12
+            delta_ep = (u - ayn * cosep + axn * sinep - ep) / denom_kepler
 
             # ep += delta_ep if abs(delta_ep)<0.95*abs(delta_ep) else 0.95*sign(delta_ep)
             if abs(delta_ep) >= 0.95:
@@ -252,7 +309,13 @@ class SGP4Propagator:
 
             # converge if abs(delta_ep)<1e-12
             if abs(delta_ep) < 1e-12:
+                converged = True
                 break
+
+        if not converged:
+            self.error = 6
+            logger.error("Kepler solver failed to converge")
+            return None, None
 
         # Position (Orb Plane) from user spec
         # ecose = axn*cos(ep) + ayn*sin(ep)
@@ -262,17 +325,25 @@ class SGP4Propagator:
         el2 = axn * axn + ayn * ayn
         pl = a * (1.0 - el2)
 
-        if pl < 0.0:
+        if pl <= 0.0:
             self.error = 3
+            logger.error("Propagation aborted: semi-parameter became non-positive")
             return None, None
 
         # r = a * (1 - ecose)
         r = a * (1.0 - ecose)
-        rdot = XKE * math.sqrt(a) * esine / r
-        rfdot = XKE * math.sqrt(pl) / r
+        if abs(r) < 1e-9:
+            self.error = 7
+            logger.error("Propagation aborted: radius collapsed toward zero")
+            return None, None
+        sqrt_a = math.sqrt(a)
+        sqrt_pl = math.sqrt(pl)
+        rdot = XKE * sqrt_a * esine / r
+        rfdot = XKE * sqrt_pl / r
 
         # Orientation vectors
-        temp = esine / (1.0 + math.sqrt(1.0 - el2))
+        sqrt_arg = max(0.0, 1.0 - el2)
+        temp = esine / (1.0 + math.sqrt(sqrt_arg))
         sinu = a / r * (sinep - ayn + axn * temp)
         cosu = a / r * (cosep - axn + ayn * temp)
         u = math.atan2(sinu, cosu)
