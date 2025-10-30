@@ -1,30 +1,9 @@
-flask==3.0.0
-flask-cors==4.0.0
-redis==5.0.1
-skyfield==1.48
-numpy==1.26.2
-scipy==1.11.4
-requests==2.31.0
-python-dotenv==1.0.0
-gunicorn==21.2.0
-pydantic==2.5.2
-astropy==5.3.4
+# Core orbital mechanics
 sgp4==2.23
-pytz==2023.3
-celery==5.3.4
-prometheus-client==0.19.0
-structlog==23.2.0
-aiohttp==3.9.1
-asyncio-throttle==1.0.2
-tenacity==8.2.3
-cryptography>=42.0.0
-jsonschema==4.20.0
-cachetools==5.3.2
-psutil==5.9.6
+
+# Scientific computing
+numpy==1.26.2
 matplotlib==3.8.2
-pandas==2.1.4
-geopy==2.4.1
-uvloop==0.19.0
-urllib3==2.1.0
-gevent==23.9.1
+
+# Differentiable computing
 torch==2.1.0
