@@ -1,20 +1,9 @@
 # Core orbital mechanics
 sgp4==2.23
-skyfield==1.48
 
 # Scientific computing
 numpy==1.26.2
-scipy==1.11.4
 matplotlib==3.8.2
-pandas==2.1.4
 
 # Differentiable computing
 torch==2.1.0
-
-# Astronomy utilities
-astropy==5.3.4
-pytz==2023.3
-
-# Utilities
-requests==2.31.0
-python-dotenv==1.0.0
