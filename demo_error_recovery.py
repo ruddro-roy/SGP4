@@ -23,6 +23,21 @@ from orbit_service.live_sgp4 import LiveSGP4
 from orbit_service.two_body_fallback import TwoBodyFallback
 
 
+# Sample TLE data (September 2023) - For demonstration purposes only
+# Real applications should use current TLE data from reliable sources
+ISS_LINE1 = "1 25544U 98067A   23259.57580000  .00012022  00000-0  21844-3 0  9995"
+ISS_LINE2 = "2 25544  51.6416 220.9944 0004263 122.0101 312.2755 15.49541986415598"
+
+# High-drag satellite TLE for testing error conditions
+DECAY_LINE1 = "1 44444U 19999A   23259.50000000  .10000000  00000-0  50000-2 0  9999"
+DECAY_LINE2 = "2 44444  51.6400 100.0000 0005000  90.0000 270.0000 16.50000000 99999"
+
+# Display configuration constants
+MAX_HISTORY_DISPLAY = 5  # Maximum number of error history entries to show
+TIMESTAMP_WIDTH = 20      # Width for timestamp column
+MESSAGE_WIDTH = 30        # Width for message column
+
+
 def print_section(title):
     """Print a section header."""
     print("\n" + "=" * 70)
@@ -34,13 +49,9 @@ def demo_normal_propagation():
     """Demonstrate normal propagation with error handling."""
     print_section("1. Normal Propagation with Error Handling")
     
-    # ISS TLE
-    line1 = "1 25544U 98067A   23259.57580000  .00012022  00000-0  21844-3 0  9995"
-    line2 = "2 25544  51.6416 220.9944 0004263 122.0101 312.2755 15.49541986415598"
-    
     # Create SGP4 instance with fallback enabled
     sgp4 = LiveSGP4(enable_fallback=True)
-    norad_id = sgp4.load_satellite(line1, line2, "ISS")
+    norad_id = sgp4.load_satellite(ISS_LINE1, ISS_LINE2, "ISS")
     
     print(f"\nLoaded satellite: ISS (NORAD ID: {norad_id})")
     print("Fallback mechanism: ENABLED")
@@ -64,12 +75,8 @@ def demo_error_diagnostics():
     """Demonstrate detailed error diagnostics."""
     print_section("2. Detailed Error Diagnostics")
     
-    # Create a decaying satellite TLE (high drag)
-    line1 = "1 44444U 19999A   23259.50000000  .10000000  00000-0  50000-2 0  9999"
-    line2 = "2 44444  51.6400 100.0000 0005000  90.0000 270.0000 16.50000000 99999"
-    
     sgp4 = LiveSGP4(enable_fallback=False)  # Disable fallback to see errors
-    norad_id = sgp4.load_satellite(line1, line2, "DECAY_TEST")
+    norad_id = sgp4.load_satellite(DECAY_LINE1, DECAY_LINE2, "DECAY_TEST")
     
     print(f"\nLoaded high-drag satellite: DECAY_TEST")
     print("Fallback mechanism: DISABLED (to demonstrate error diagnostics)")
@@ -115,12 +122,8 @@ def demo_fallback_mechanism():
     """Demonstrate automatic fallback to two-body propagation."""
     print_section("3. Automatic Fallback to Two-Body Propagation")
     
-    # Decaying satellite
-    line1 = "1 44444U 19999A   23259.50000000  .10000000  00000-0  50000-2 0  9999"
-    line2 = "2 44444  51.6400 100.0000 0005000  90.0000 270.0000 16.50000000 99999"
-    
     sgp4 = LiveSGP4(enable_fallback=True)  # Enable fallback
-    norad_id = sgp4.load_satellite(line1, line2, "DECAY_FALLBACK")
+    norad_id = sgp4.load_satellite(DECAY_LINE1, DECAY_LINE2, "DECAY_FALLBACK")
     
     print(f"\nLoaded high-drag satellite: DECAY_FALLBACK")
     print("Fallback mechanism: ENABLED")
@@ -158,11 +161,8 @@ def demo_error_history():
     """Demonstrate error history tracking."""
     print_section("4. Error History Tracking")
     
-    line1 = "1 44444U 19999A   23259.50000000  .10000000  00000-0  50000-2 0  9999"
-    line2 = "2 44444  51.6400 100.0000 0005000  90.0000 270.0000 16.50000000 99999"
-    
     sgp4 = LiveSGP4(enable_fallback=True)
-    norad_id = sgp4.load_satellite(line1, line2, "ERROR_TRACK")
+    norad_id = sgp4.load_satellite(DECAY_LINE1, DECAY_LINE2, "ERROR_TRACK")
     
     print(f"\nLoaded satellite: ERROR_TRACK")
     
@@ -183,18 +183,18 @@ def demo_error_history():
     
     if history:
         print(f"\nError History ({len(history)} errors recorded):")
-        print(f"{'Timestamp':^20} | {'Error Code':^11} | {'Message'}")
+        print(f"{'Timestamp':^{TIMESTAMP_WIDTH}} | {'Error Code':^11} | {'Message'}")
         print("-" * 70)
         
-        for error in history[:5]:  # Show first 5
-            timestamp = error['timestamp'][:19]  # Truncate timestamp
+        for error in history[:MAX_HISTORY_DISPLAY]:  # Show first N errors
+            timestamp = error['timestamp'][:TIMESTAMP_WIDTH-1]  # Truncate timestamp
             code = error['error_code']
-            message = error['error_message'][:30]  # Truncate message
+            message = error['error_message'][:MESSAGE_WIDTH]  # Truncate message
             
-            print(f"{timestamp:^20} | {code:^11d} | {message}")
+            print(f"{timestamp:^{TIMESTAMP_WIDTH}} | {code:^11d} | {message}")
         
-        if len(history) > 5:
-            print(f"... and {len(history) - 5} more errors")
+        if len(history) > MAX_HISTORY_DISPLAY:
+            print(f"... and {len(history) - MAX_HISTORY_DISPLAY} more errors")
     else:
         print(f"\nNo errors recorded (all propagations successful)")
 
