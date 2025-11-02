@@ -7,10 +7,6 @@ described in Vallado et al. (2006) "Revisiting Spacetrack Report #3" (AAS 06-675
 Purpose:
 - Educational reference for understanding SGP4 internals
 - Algorithm validation and comparison
-- Not intended for production use
-
-For production applications, use the proven sgp4 library or the
-differentiable_sgp4_torch wrapper instead.
 
 Implementation details:
 - Uses WGS-72 gravitational constants as specified in AAS 06-675
