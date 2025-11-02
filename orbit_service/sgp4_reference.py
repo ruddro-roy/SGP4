@@ -321,13 +321,13 @@ class SGP4Propagator:
         # Store initial error state
         initial_error = self.error
 
-        # Secular updates
-        argp = self.argpo + self.argdot * tsince
-        omg = self.nodeo + self.nodedot * tsince
-        m = self.mo + self.mdot * tsince
+        # Update for drag effects
+        c1sq = self.c1 * self.c1
+        temp_val = 1.5 * self.c1 * tsince * tsince
+        delta_m = temp_val * self.ndot
         
-        # Update semi-major axis with drag
-        temp = 1.0 - self.c1 * tsince
+        # Calculate intermediate mean motion and semi-major axis
+        temp = 1.0 - self.c1 * tsince - delta_m
         if temp <= 0.0:
             self.error = 1
             self.error_message = (
@@ -337,17 +337,9 @@ class SGP4Propagator:
                 f"with high B* drag coefficient propagated far into the future."
             )
             logger.error(self.error_message)
-            
-            # Attempt recovery: use last valid semi-major axis
-            if hasattr(self, '_last_valid_a') and self._last_valid_a > MIN_SEMI_MAJOR_AXIS:
-                logger.warning(f"Attempting recovery using last valid semi-major axis")
-                a = self._last_valid_a
-                self.error = 0  # Clear error for recovery attempt
-            else:
-                return None, None
-        else:
-            a = self.a * temp * temp
-            
+            return None, None
+        
+        a = self.a * temp * temp
         if a < MIN_SEMI_MAJOR_AXIS:
             self.error = 7
             self.error_message = (
@@ -358,9 +350,13 @@ class SGP4Propagator:
             )
             logger.error(self.error_message)
             return None, None
-        
-        # Store valid semi-major axis for potential recovery
+            
         self._last_valid_a = a
+        
+        # Secular updates for orbital elements
+        m = self.mo + self.mdot * tsince
+        argp = self.argpo + self.argdot * tsince
+        omg = self.nodeo + self.nodedot * tsince
         
         # Update eccentricity
         e = self.ecco - self.bstar * self.c4 * tsince
@@ -398,7 +394,7 @@ class SGP4Propagator:
                 f"becomes unstable due to perturbations."
             )
             logger.warning(self.error_message)
-            # Don't return None - use the best available solution and continue
+            # Do not return None - use the best available solution and continue
             # This allows degraded but usable propagation
 
         # Calculate position and velocity
