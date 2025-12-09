@@ -303,10 +303,3 @@ Potential future improvements:
 - Hoots, F. R., & Roehrich, R. L. (1980). Spacetrack Report No. 3
 - Vallado, D. A., et al. (2006). Revisiting Spacetrack Report #3. AIAA 2006-6753
 
-## Support
-
-For issues or questions:
-- Check the test suite for usage examples
-- Run the demo script for interactive examples
-- Review error diagnostics in propagation results
-- Consult the error code table above
