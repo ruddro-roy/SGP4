@@ -110,22 +110,6 @@ python demo_error_recovery.py     # demonstrate error recovery features
 python -m pytest tests -v
 ```
 
-## Project layout
-
-```
-orbit_service/
-├── tle_parser.py
-├── differentiable_sgp4_torch.py
-├── sgp4_reference.py
-├── live_sgp4.py
-└── perturbation_scanner.py
-tests/
-demo.py
-config.py
-logging_config.py
-requirements.txt
-```
-
 ## References
 
 - Vallado, D. A., Crawford, P., Hujsak, R., & Kelso, T. S. (2006). Revisiting Spacetrack Report #3. AIAA 2006-6753.
