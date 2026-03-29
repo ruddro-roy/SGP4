@@ -46,11 +46,19 @@ tmp/
 temp/
 *.tmp
 
-# Generated plots and outputs
-*.png
-*.pdf
-*.svg
+# Generated plots and outputs (root level)
+/*.png
+/*.pdf
+/*.svg
+
+# Keep committed assets
+!assets/
 
 # Jupyter notebooks
 .ipynb_checkpoints/
 *.ipynb
+
+# Claude Code tooling
+.claude/
+.mcp.json
+CLAUDE.md
